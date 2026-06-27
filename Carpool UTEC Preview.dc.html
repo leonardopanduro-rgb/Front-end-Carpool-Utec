@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #111827; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.screen { animation: slideIn 0.18s ease; }
+::-webkit-scrollbar { width: 0; }
+</style>
+</helmet>
+
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;gap:20px">
+
+  <!-- Nav pills -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:480px" id="navPills"></div>
+
+  <!-- Phone shell -->
+  <div style="width:375px;height:780px;background:#0B1F3A;border-radius:44px;padding:10px;box-shadow:0 48px 96px rgba(0,0,0,0.7),inset 0 0 0 1px rgba(255,255,255,0.06)">
+    <!-- Status bar -->
+    <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px">
+      <span style="color:#fff;font-size:13px;font-weight:700;letter-spacing:0.2px">9:41</span>
+      <div style="width:118px;height:28px;background:#000;border-radius:18px"></div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="white" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="white" opacity=".6"/><rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="white" opacity=".85"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg>
+        <svg width="15" height="12" viewBox="0 0 15 12"><path d="M7.5 2C9.8 2 11.9 2.9 13.4 4.4L15 2.8C13.1.9 10.4 0 7.5 0S1.9.9 0 2.8L1.6 4.4C3.1 2.9 5.2 2 7.5 2zM7.5 6c1.4 0 2.6.5 3.5 1.4L12.6 5.8C11.3 4.6 9.5 4 7.5 4S3.7 4.6 2.4 5.8L4 7.4C4.9 6.5 6.1 6 7.5 6zM7.5 10c.8 0 1.5.3 2 .8L11 9.3C10.1 8.5 8.9 8 7.5 8S4.9 8.5 4 9.3L5.5 10.8C6 10.3 6.7 10 7.5 10z" fill="white"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="white" stroke-width="1" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="white" opacity=".4"/><rect x="1.5" y="2.5" width="18" height="7" rx="2" fill="white"/></svg>
+      </div>
+    </div>
+    <!-- Screen area -->
+    <div style="background:#F2F4F7;border-radius:36px;height:calc(100% - 44px);overflow:hidden;position:relative">
+      <div id="screenHost" style="height:100%;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:0.5px;text-transform:uppercase">Navega entre pantallas</p>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen: 'welcome', vehicleModal: false, requestSent: false };
+
+  // ── SVG icon library ─────────────────────────────────────────────────────
+  icon(name, size = 20, color = 'currentColor') {
+    const paths = {
+      search:   'M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 110-12 6 6 0 010 12zm5.293.293l4.414 4.414-1.414 1.414-4.414-4.414 1.414-1.414z',
+      plus:     'M12 4v8m-8 0h16',  // line icons — use stroke
+      list:     'M4 6h16M4 10h16M4 14h10',
+      inbox:    'M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-8l8 5 8-5v8zm-8-7L4 6h16l-8 5z',
+      car:      'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z',
+      user:     'M12 12c2.7 0 4-1.3 4-4s-1.3-4-4-4-4 1.3-4 4 1.3 4 4 4zm0 2c-4 0-8 2-8 4v2h16v-2c0-2-4-4-8-4z',
+      star:     'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+      location: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+      clock:    'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z',
+      seat:     'M7 2h10v2H7V2zM5 6h14v10H5V6zm2 2v6h10V8H7zm3 8v4h4v-4h-4z',
+      back:     'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
+      check:    'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
+      close:    'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+      chevron:  'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
+      route:    'M17 4h-3V2H9v2H6v7c0 1.1.9 2 2 2h2v7l4-4v-7h2c1.1 0 2-.9 2-2V4z',
+      panel:    'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm13 0v8m-4-4h8',
+    };
+    const d = paths[name] || paths.star;
+    // Use stroke for line-style icons
+    const lineIcons = ['plus','list','panel'];
+    if (lineIcons.includes(name)) {
+      return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+    }
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="${d}"/></svg>`;
+  }
+
+  componentDidMount() { this.renderNav(); this.renderScreen(this.state.screen); }
+
+  go(s) {
+    this.setState({ screen: s, vehicleModal: false, requestSent: false }, () => {
+      this.renderNav(); this.renderScreen(s);
+    });
+  }
+
+  renderNav() {
+    const screens = [
+      { id:'welcome', label:'Bienvenida' },{ id:'login', label:'Login' },{ id:'register', label:'Registro' },
+      { id:'home', label:'Home' },{ id:'search', label:'Buscar' },{ id:'detail', label:'Detalle' },
+      { id:'publish', label:'Publicar' },{ id:'requests', label:'Solicitudes' },{ id:'driver', label:'Panel' },
+      { id:'vehicle', label:'Vehículos' },{ id:'profile', label:'Perfil' },{ id:'review', label:'Calificar' },
+    ];
+    const el = document.getElementById('navPills');
+    if (!el) return;
+    el.innerHTML = screens.map(s =>
+      `<button data-screen="${s.id}"
+        style="padding:5px 12px;border-radius:20px;border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:Inter,sans-serif;letter-spacing:0.3px;transition:all .12s;
+        background:${this.state.screen===s.id?'#18A8E0':'rgba(255,255,255,0.1)'};
+        color:${this.state.screen===s.id?'#fff':'rgba(255,255,255,0.55)'};">${s.label}</button>`
+    ).join('');
+    el.querySelectorAll('[data-screen]').forEach(button =>
+      button.addEventListener('click', () => this.go(button.getAttribute('data-screen'))));
+  }
+
+  renderScreen(id) {
+    const host = document.getElementById('screenHost');
+    if (!host) return;
+    const map = {
+      welcome:  this.screenWelcome(),
+      login:    this.screenLogin(),
+      register: this.screenRegister(),
+      home:     this.screenHome(),
+      search:   this.screenSearch(),
+      detail:   this.screenDetail(),
+      publish:  this.screenPublish(),
+      requests: this.screenRequests(),
+      driver:   this.screenDriver(),
+      vehicle:  this.screenVehicle(),
+      profile:  this.screenProfile(),
+      review:   this.screenReview(),
+    };
+    host.innerHTML = `<div class="screen" style="min-height:100%;font-family:Inter,sans-serif">${map[id]||''}</div>`;
+    host.querySelectorAll('[data-nav]').forEach(el =>
+      el.addEventListener('click', () => this.go(el.getAttribute('data-nav'))));
+    host.querySelectorAll('[data-action]').forEach(el =>
+      el.addEventListener('click', () => {
+        const a = el.getAttribute('data-action');
+        if (a==='send') this.setState({requestSent:true},()=>this.renderScreen(this.state.screen));
+        if (a==='vm-open') this.setState({vehicleModal:true},()=>this.renderScreen(this.state.screen));
+        if (a==='vm-close') this.setState({vehicleModal:false},()=>this.renderScreen(this.state.screen));
+      }));
+  }
+
+  // ── Reusable parts ───────────────────────────────────────────────────────
+  header(title, back=null) {
+    return `<div style="background:#0B1F3A;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20">
+      ${back?`<span data-nav="${back}" style="color:#18A8E0;cursor:pointer;display:flex;align-items:center">${this.icon('back',20,'#18A8E0')}</span>`:''}
+      <span style="color:#fff;font-size:17px;font-weight:700;flex:1">${title}</span>
+    </div>`;
+  }
+
+  field(label, placeholder) {
+    return `<div style="margin-bottom:15px">
+      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;letter-spacing:0.2px">${label}</div>
+      <div style="border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;padding:0 14px;height:46px;display:flex;align-items:center">
+        <span style="color:#9CA3AF;font-size:14px">${placeholder}</span>
+      </div>
+    </div>`;
+  }
+
+  btn(label, nav=null, action=null, bg='#18A8E0', color='#fff') {
+    return `<button ${nav?`data-nav="${nav}"`:''}  ${action?`data-action="${action}"`:''}
+      style="width:100%;height:50px;border-radius:11px;border:none;background:${bg};color:${color};font-size:15px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;letter-spacing:0.1px">${label}</button>`;
+  }
+
+  statusDot(status) {
+    const map = { PENDING:['#D97706','Pendiente'], ACCEPTED:['#059669','Aceptado'], REJECTED:['#DC2626','Rechazado'], CANCELLED:['#6B7280','Cancelado'] };
+    const [c,l] = map[status]||map.PENDING;
+    return `<span style="display:inline-flex;align-items:center;gap:5px;background:${c}18;border-radius:20px;padding:3px 10px">
+      <span style="width:6px;height:6px;border-radius:50%;background:${c};display:inline-block"></span>
+      <span style="color:${c};font-size:11px;font-weight:700">${l}</span>
+    </span>`;
+  }
+
+  dirTag(fromUTEC) {
+    return fromUTEC
+      ? `<span style="background:#0B1F3A;color:#18A8E0;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:0.5px">DESDE UTEC</span>`
+      : `<span style="background:#18A8E0;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:0.5px">HACIA UTEC</span>`;
+  }
+
+  tripCard(title, fromUTEC, dest, time, seats, type, nav=null) {
+    return `<div ${nav?`data-nav="${nav}"`:''}
+      style="background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);cursor:${nav?'pointer':'default'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        ${this.dirTag(fromUTEC)}
+        <span style="font-size:11px;color:#9CA3AF;font-weight:500">${type}</span>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:6px">${title}</div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;color:#6B7280;font-size:13px">
+        ${this.icon('location',14,'#9CA3AF')}
+        <span>${dest}</span>
+      </div>
+      <div style="display:flex;gap:14px">
+        <span style="display:flex;align-items:center;gap:4px;color:#9CA3AF;font-size:12px">${this.icon('clock',13,'#9CA3AF')} ${time}</span>
+        <span style="display:flex;align-items:center;gap:4px;color:#9CA3AF;font-size:12px">${this.icon('seat',13,'#9CA3AF')} ${seats} asientos</span>
+      </div>
+    </div>`;
+  }
+
+  // ── Screens ──────────────────────────────────────────────────────────────
+  screenWelcome() {
+    return `<div style="background:#0B1F3A;min-height:736px;display:flex;flex-direction:column;padding:0 28px">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+        <div style="margin-bottom:32px">
+          <div style="font-size:11px;font-weight:700;color:#18A8E0;letter-spacing:2px;margin-bottom:12px">UNIVERSIDAD DE INGENIERÍA Y TECNOLOGÍA</div>
+          <div style="font-size:38px;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-1px">Carpool<br>UTEC</div>
+          <div style="font-size:14px;color:#64748B;margin-top:12px;line-height:1.6">Viajes compartidos entre<br>estudiantes del campus Barranco</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:32px">
+          ${['Barranco','Miraflores','Surco','San Isidro','La Molina','Chorrillos'].map(d =>
+            `<div style="display:flex;align-items:center;gap:8px">
+              <div style="width:4px;height:4px;border-radius:50%;background:#18A8E0"></div>
+              <span style="color:#94A3B8;font-size:13px">${d}</span>
+            </div>`
+          ).join('')}
+        </div>
+      </div>
+      <div style="padding-bottom:40px;display:flex;flex-direction:column;gap:10px">
+        ${this.btn('Iniciar sesión','login')}
+        <button data-nav="register" style="width:100%;height:50px;border-radius:11px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:#fff;font-size:15px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer">Crear cuenta</button>
+      </div>
+    </div>`;
+  }
+
+  screenLogin() {
+    return `<div style="background:#F9FAFB;min-height:736px">
+      ${this.header('Iniciar sesión','welcome')}
+      <div style="padding:28px 22px">
+        <div style="font-size:24px;font-weight:800;color:#111827;margin-bottom:4px">Bienvenido de vuelta</div>
+        <div style="font-size:13px;color:#9CA3AF;margin-bottom:28px">Correo institucional UTEC</div>
+        ${this.field('Correo','correo@utec.edu.pe')}
+        ${this.field('Contraseña','••••••••')}
+        <div style="margin-top:6px">${this.btn('Entrar','home')}</div>
+        <div style="margin-top:12px">${this.btn('Registrarme','register','',  'transparent','#18A8E0')}</div>
+      </div>
+    </div>`;
+  }
+
+  screenRegister() {
+    return `<div style="background:#F9FAFB;min-height:736px">
+      ${this.header('Crear cuenta','welcome')}
+      <div style="padding:22px">
+        ${this.field('Nombre','Juan')}
+        ${this.field('Apellido','García')}
+        ${this.field('Correo UTEC','juan.garcia@utec.edu.pe')}
+        ${this.field('Contraseña','Mín. 8 caracteres con letras y números')}
+        ${this.field('Teléfono','987654321')}
+        ${this.field('Código','U202600001')}
+        ${this.field('Ciclo','1–12')}
+        <div style="margin-bottom:15px">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:5px">Carrera</div>
+          <div style="border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;padding:0 14px;height:46px;display:flex;align-items:center;justify-content:space-between">
+            <span style="color:#9CA3AF;font-size:14px">Selecciona tu carrera</span>
+            ${this.icon('chevron',18,'#9CA3AF')}
+          </div>
+        </div>
+        <div style="margin-bottom:20px">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px">¿Cómo empiezas?</div>
+          <div style="border:2px solid #18A8E0;border-radius:10px;padding:13px 14px;background:#EFF9FE;margin-bottom:7px">
+            <span style="color:#18A8E0;font-size:14px;font-weight:600">Buscar movilidad</span>
+          </div>
+          <div style="border:1.5px solid #E5E7EB;border-radius:10px;padding:13px 14px;background:#fff">
+            <span style="color:#374151;font-size:14px;font-weight:500">Publicar como conductor</span>
+          </div>
+        </div>
+        ${this.btn('Crear cuenta','home')}
+      </div>
+    </div>`;
+  }
+
+  screenHome() {
+    const actions = [
+      { icon:'search',   label:'Buscar',     nav:'search'  },
+      { icon:'route',    label:'Publicar',   nav:'publish' },
+      { icon:'list',     label:'Solicitudes',nav:'requests'},
+      { icon:'panel',    label:'Panel',      nav:'driver'  },
+      { icon:'car',      label:'Vehículos',  nav:'vehicle' },
+      { icon:'user',     label:'Perfil',     nav:'profile' },
+    ];
+    return `<div style="background:#F2F4F7;min-height:736px">
+      <!-- Header -->
+      <div style="background:#0B1F3A;padding:20px 22px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+          <div>
+            <div style="font-size:11px;color:#18A8E0;font-weight:700;letter-spacing:1px;margin-bottom:6px">BUENOS DÍAS</div>
+            <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.3px">Ana García</div>
+            <div style="font-size:12px;color:#64748B;margin-top:3px">Ciencia de Datos · Ciclo 6</div>
+          </div>
+          <div style="background:rgba(24,168,224,0.15);border:1px solid rgba(24,168,224,0.3);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:5px">
+            ${this.icon('star',14,'#F5C518')}
+            <span style="color:#fff;font-size:14px;font-weight:700">4.8</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${[['3','Disponibles'],['1','Pendientes'],['2','Confirmados']].map(([n,l])=>
+            `<div style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:#18A8E0">${n}</div>
+              <div style="font-size:10px;color:#64748B;margin-top:2px;font-weight:500">${l}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div style="padding:18px 18px 30px">
+        <!-- Actions -->
+        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;letter-spacing:0.2px">ACCESOS RÁPIDOS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+          ${actions.map(a=>`
+            <div data-nav="${a.nav}" style="background:#fff;border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+              <div style="width:36px;height:36px;border-radius:10px;background:#F0F9FF;display:flex;align-items:center;justify-content:center">
+                ${this.icon(a.icon,18,'#18A8E0')}
+              </div>
+              <span style="font-size:10px;color:#374151;font-weight:600;text-align:center;line-height:1.2">${a.label}</span>
+            </div>`).join('')}
+        </div>
+
+        <!-- Confirmed ride -->
+        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;letter-spacing:0.2px">VIAJE CONFIRMADO</div>
+        <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:18px;border-left:3px solid #18A8E0;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:11px;font-weight:700;color:#18A8E0;background:#EFF9FE;border-radius:4px;padding:2px 8px;letter-spacing:0.4px">CONDUCTOR</span>
+            <button data-nav="review" style="display:flex;align-items:center;gap:5px;background:#111827;border:none;border-radius:6px;padding:4px 10px;cursor:pointer">
+              ${this.icon('star',12,'#F5C518')}
+              <span style="color:#fff;font-size:11px;font-weight:700">Calificar</span>
+            </button>
+          </div>
+          <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:5px">Miraflores, Av. Larco</div>
+          <div style="font-size:12px;color:#9CA3AF">Lun 15 Abr · 07:30</div>
+        </div>
+
+        <!-- Available -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700;color:#374151;letter-spacing:0.2px">DISPONIBLES</div>
+          <span data-nav="search" style="font-size:12px;color:#18A8E0;font-weight:600;cursor:pointer">Ver todos</span>
+        </div>
+        ${this.tripCard('Viaje a Miraflores 7am',true,'Miraflores, Óvalo','15 Abr 07:00','2','Ofrece asiento','detail')}
+      </div>
+    </div>`;
+  }
+
+  screenSearch() {
+    const chips = (opts, active) => opts.map((o,i)=>
+      `<div style="border-radius:6px;border:${i===active?'none':'1px solid #E5E7EB'};padding:5px 12px;background:${i===active?'#0B1F3A':'#fff'};cursor:pointer;white-space:nowrap">
+        <span style="color:${i===active?'#18A8E0':'#6B7280'};font-size:12px;font-weight:600">${o}</span>
+      </div>`).join('');
+
+    return `<div style="background:#F2F4F7;min-height:736px">
+      ${this.header('Buscar viajes','home')}
+      <div style="background:#fff;padding:14px 16px;border-bottom:1px solid #F3F4F6">
+        <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin-bottom:6px">SENTIDO</div>
+        <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:10px">${chips(['Todos','Desde UTEC','Hacia UTEC'],0)}</div>
+        <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin-bottom:6px">TIPO</div>
+        <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:10px">${chips(['Todos','Ofrece asiento','Busca conductor'],0)}</div>
+        <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin-bottom:6px">DISTRITO</div>
+        <div style="display:flex;gap:6px;overflow-x:auto">${chips(['Todos','Barranco','Miraflores','Surco','San Borja','La Molina'],0)}</div>
+      </div>
+      <div style="padding:14px">
+        ${this.tripCard('Viaje a Miraflores 7am',true,'Miraflores, Óvalo Miraflores','15 Abr 07:00','2','Ofrece asiento','detail')}
+        ${this.tripCard('Busco conductor a Surco',false,'Surco, Av. Primavera','16 Abr 08:00','1','Busca conductor',null)}
+        ${this.tripCard('Regreso La Molina tarde',true,'La Molina, Javier Prado','16 Abr 17:30','3','Ofrece asiento',null)}
+      </div>
+    </div>`;
+  }
+
+  screenDetail() {
+    const sent = this.state.requestSent;
+    const row = (icon, label, val) =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #F3F4F6">
+        <div style="display:flex;align-items:center;gap:7px;color:#6B7280;font-size:13px">${this.icon(icon,15,'#9CA3AF')} ${label}</div>
+        <span style="color:#111827;font-size:13px;font-weight:600;max-width:55%;text-align:right">${val}</span>
+      </div>`;
+    return `<div style="background:#F2F4F7;min-height:736px">
+      ${this.header('Detalle del viaje','search')}
+      <div style="padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          ${this.dirTag(true)}
+          <span style="font-size:11px;color:#9CA3AF;font-weight:500">Ofrece asientos</span>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;letter-spacing:-0.3px">Viaje a Miraflores 7am</div>
+        <div style="font-size:13px;color:#6B7280;line-height:1.6;margin-bottom:16px">Salgo puntual desde UTEC. Punto en Óvalo Miraflores.</div>
+
+        <div style="background:#fff;border-radius:14px;padding:4px 16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+          ${row('location','Destino','Miraflores, Óvalo')}
+          ${row('clock','Salida','Lun 15 Abr · 07:00')}
+          ${row('seat','Asientos','2')}
+          ${row('user','Autor','Estudiante UTEC #42')}
+        </div>
+
+        <div style="background:#EFF9FE;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:16px">
+          <span style="font-size:16px">🌤</span>
+          <span style="font-size:13px;color:#0369A1;font-weight:500">Barranco · Nublado · 18°C</span>
+        </div>
+
+        ${sent
+          ? `<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:16px;text-align:center">
+              ${this.icon('check',22,'#16A34A')}
+              <div style="color:#15803D;font-weight:700;font-size:14px;margin-top:6px">Solicitud enviada</div>
+              <div style="color:#16A34A;font-size:12px;margin-top:3px">Conductor por confirmar</div>
+            </div>`
+          : `<div style="background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+              <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:14px">Solicitar asiento</div>
+              ${this.field('Punto de recojo','Ej: Óvalo Miraflores, altura BCP')}
+              ${this.field('Asientos','1')}
+              ${this.field('Mensaje (opcional)','Ej: Llego 5 min antes')}
+              <div data-action="send">${this.btn('Confirmar solicitud')}</div>
+            </div>`}
+      </div>
+    </div>`;
+  }
+
+  screenPublish() {
+    return `<div style="background:#F2F4F7;min-height:736px">
+      ${this.header('Publicar viaje','home')}
+      <div style="padding:18px">
+        <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin-bottom:8px">MODO</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+          <div style="border:2px solid #18A8E0;border-radius:10px;padding:14px;background:#EFF9FE">
+            <div style="display:flex;justify-content:center;margin-bottom:6px">${this.icon('car',22,'#18A8E0')}</div>
+            <div style="font-size:12px;font-weight:700;color:#18A8E0;text-align:center">Ofrezco asientos</div>
+          </div>
+          <div style="border:1.5px solid #E5E7EB;border-radius:10px;padding:14px;background:#fff">
+            <div style="display:flex;justify-content:center;margin-bottom:6px">${this.icon('search',22,'#9CA3AF')}</div>
+            <div style="font-size:12px;font-weight:600;color:#6B7280;text-align:center">Busco conductor</div>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin-bottom:8px">SENTIDO</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+          <div style="border:2px solid #18A8E0;border-radius:10px;padding:12px;background:#EFF9FE;text-align:center;cursor:pointer">
+            <span style="font-size:12px;font-weight:700;color:#18A8E0">Desde UTEC</span>
+          </div>
+          <div style="border:1.5px solid #E5E7EB;border-radius:10px;padding:12px;background:#fff;text-align:center;cursor:pointer">
+            <span style="font-size:12px;font-weight:600;color:#6B7280">Hacia UTEC</span>
+          </div>
+        </div>
+        ${this.field('Título','Viaje a Miraflores, salida 7am')}
+        ${this.field('Descripción (opcional)','Punto exacto, referencias...')}
+        ${this.field('Destino','Miraflores, Av. Larco')}
+        ${this.field('Asientos disponibles','2')}
+        ${this.field('Fecha (YYYY-MM-DD)','2025-04-15')}
+        ${this.field('Hora (HH:MM)','07:30')}
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin-bottom:8px">VEHÍCULO</div>
+          <div style="border:2px solid #18A8E0;border-radius:10px;padding:13px 14px;background:#EFF9FE">
+            <div style="font-size:15px;font-weight:800;color:#0B1F3A;letter-spacing:1px">ABC-123</div>
+            <div style="font-size:12px;color:#6B7280;margin-top:2px">Toyota Yaris · Blanco · 4 asientos</div>
+          </div>
+        </div>
+        <div style="border:1.5px solid #18A8E0;border-radius:10px;padding:13px 14px;display:flex;align-items:center;gap:10px;margin-bottom:16px;background:#fff">
+          ${this.icon('location',18,'#18A8E0')}
+          <span style="color:#18A8E0;font-size:13px;font-weight:600">Coordenadas capturadas · GPS</span>
+        </div>
+        ${this.btn('Publicar viaje','home')}
+      </div>
+    </div>`;
+  }
+
+  screenRequests() {
+    const reqs = [
+      { pub:'#12', pickup:'Óvalo Miraflores', seats:1, status:'PENDING' },
+      { pub:'#8', pickup:'Lince, Av. Arequipa', seats:2, status:'ACCEPTED' },
+      { pub:'#5', pickup:'San Borja Norte', seats:1, status:'REJECTED' },
+    ];
+    return `<div style="background:#F2F4F7;min-height:736px">
+      ${this.header('Mis solicitudes','home')}
+      <div style="padding:14px">
+        ${reqs.map(r=>`
+          <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:13px;font-weight:700;color:#111827">Publicación ${r.pub}</span>
+              ${this.statusDot(r.status)}
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;color:#6B7280;font-size:13px;margin-bottom:5px">${this.icon('location',14,'#9CA3AF')} ${r.pickup}</div>
+            <div style="display:flex;align-items:center;gap:5px;color:#6B7280;font-size:13px">${this.icon('seat',14,'#9CA3AF')} ${r.seats} asiento(s)</div>
+            ${r.status==='PENDING'?`<button style="width:100%;margin-top:12px;height:42px;border-radius:9px;border:1.5px solid #DC2626;background:transparent;color:#DC2626;font-size:13px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer">Cancelar</button>`:''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  screenDriver() {
+    const vm = this.state.vehicleModal;
+    return `<div style="background:#F2F4F7;min-height:736px;position:relative">
+      ${this.header('Panel de solicitudes','home')}
+      <div style="padding:14px">
+        <div style="background:#0B1F3A;border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <span style="color:#fff;font-size:14px;font-weight:700">Viaje a Miraflores 7am</span>
+          <span style="font-size:11px;font-weight:700;color:#18A8E0;background:rgba(24,168,224,0.15);border-radius:4px;padding:2px 8px;letter-spacing:0.4px">CONDUCTOR</span>
+        </div>
+        ${[
+          {id:101,role:'Pasajero',pickup:'Óvalo Miraflores',seats:1,status:'PENDING'},
+          {id:102,role:'Pasajero',pickup:'Av. Arequipa 1200',seats:2,status:'ACCEPTED'},
+        ].map(r=>`
+          <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:13px;font-weight:700;color:#111827">Estudiante UTEC #${r.id}</span>
+              ${this.statusDot(r.status)}
+            </div>
+            <div style="font-size:12px;color:#9CA3AF;font-weight:500;margin-bottom:5px">${r.role}</div>
+            <div style="display:flex;align-items:center;gap:5px;color:#6B7280;font-size:13px;margin-bottom:5px">${this.icon('location',14,'#9CA3AF')} ${r.pickup}</div>
+            <div style="display:flex;align-items:center;gap:5px;color:#6B7280;font-size:13px;margin-bottom:12px">${this.icon('seat',14,'#9CA3AF')} ${r.seats} asiento(s)</div>
+            ${r.status==='PENDING'?`<div style="display:flex;gap:8px">
+              <button data-action="vm-open" style="flex:1;height:42px;border-radius:9px;border:none;background:#18A8E0;color:#fff;font-size:13px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer">Aceptar</button>
+              <button style="flex:1;height:42px;border-radius:9px;border:1.5px solid #DC2626;background:transparent;color:#DC2626;font-size:13px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer">Rechazar</button>
+            </div>`:''}
+          </div>`).join('')}
+      </div>
+
+      ${vm?`<div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;flex-direction:column;justify-content:flex-end;z-index:50">
+        <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px">
+          <div style="font-size:16px;font-weight:800;color:#111827;margin-bottom:4px">Vehículo del conductor</div>
+          <div style="font-size:12px;color:#9CA3AF;margin-bottom:16px">Registrado por el solicitante</div>
+          <div style="border:2px solid #18A8E0;border-radius:10px;padding:14px;background:#EFF9FE;margin-bottom:8px">
+            <div style="font-size:16px;font-weight:800;color:#111827;letter-spacing:1px">XYZ-456</div>
+            <div style="font-size:12px;color:#6B7280;margin-top:3px">Honda Civic · Rojo · 4 asientos</div>
+          </div>
+          <div style="margin-top:10px">${this.btn('Confirmar aceptar',null,'vm-close')}</div>
+          <div style="margin-top:8px"><button data-action="vm-close" style="width:100%;height:46px;border-radius:10px;border:1.5px solid #E5E7EB;background:transparent;color:#6B7280;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer">Cancelar</button></div>
+        </div>
+      </div>`:''}
+    </div>`;
+  }
+
+  screenVehicle() {
+    const cars = [{plate:'ABC-123',brand:'Toyota',model:'Yaris',color:'Blanco',seats:4},{plate:'DEF-789',brand:'Honda',model:'Fit',color:'Gris',seats:5}];
+    return `<div style="background:#F2F4F7;min-height:736px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px">
+        <span style="font-size:20px;font-weight:800;color:#111827">Mis vehículos</span>
+        <button style="display:flex;align-items:center;gap:5px;padding:0 14px;height:38px;border-radius:9px;border:none;background:#18A8E0;color:#fff;font-size:13px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer">
+          ${this.icon('plus',14,'#fff')} Agregar
+        </button>
+      </div>
+      <div style="padding:0 16px">
+        ${cars.map(v=>`
+          <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+            <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+              <div>
+                <div style="font-size:19px;font-weight:900;color:#111827;letter-spacing:1.5px">${v.plate}</div>
+                <div style="font-size:13px;color:#6B7280;margin-top:4px">${v.brand} ${v.model} · ${v.color}</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:6px;color:#9CA3AF;font-size:12px">
+                  ${this.icon('seat',13,'#9CA3AF')} ${v.seats} asientos
+                </div>
+              </div>
+              <div style="width:44px;height:44px;border-radius:10px;background:#F9FAFB;display:flex;align-items:center;justify-content:center">
+                ${this.icon('car',24,'#0B1F3A')}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button style="flex:1;height:38px;border-radius:8px;border:1.5px solid #18A8E0;background:transparent;color:#18A8E0;font-size:12px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer">Editar</button>
+              <button style="flex:1;height:38px;border-radius:8px;border:1.5px solid #DC2626;background:transparent;color:#DC2626;font-size:12px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer">Eliminar</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  screenProfile() {
+    const rows = [['Código','U202412345'],['Carrera','Ciencia de Datos'],['Ciclo','6'],['Teléfono','987654321'],['Rol','Estudiante']];
+    return `<div style="background:#F2F4F7;min-height:736px">
+      ${this.header('Mi perfil','home')}
+      <div style="padding:20px">
+        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:24px">
+          <div style="width:76px;height:76px;border-radius:38px;background:#0B1F3A;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+            <span style="color:#18A8E0;font-size:26px;font-weight:800;letter-spacing:-1px">AG</span>
+          </div>
+          <div style="font-size:19px;font-weight:800;color:#111827">Ana García</div>
+          <div style="color:#9CA3AF;font-size:13px;margin-top:3px">ana.garcia@utec.edu.pe</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:10px;background:#FFF9E6;border-radius:8px;padding:5px 12px">
+            ${this.icon('star',14,'#D97706')}
+            <span style="color:#D97706;font-weight:700;font-size:14px">4.8</span>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:14px;padding:4px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+          ${rows.map(([l,v])=>`
+            <div style="display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #F3F4F6">
+              <span style="color:#9CA3AF;font-size:13px">${l}</span>
+              <span style="color:#111827;font-size:13px;font-weight:600">${v}</span>
+            </div>`).join('')}
+        </div>
+        <div style="background:#EFF9FE;border:1px solid #BAE6FD;border-radius:10px;padding:12px 14px;font-size:12px;color:#0369A1;font-weight:500;margin-bottom:18px;line-height:1.5">
+          Modo flexible: puedes ser pasajero o conductor según cada viaje
+        </div>
+        <button style="width:100%;height:50px;border-radius:11px;border:none;background:#DC2626;color:#fff;font-size:15px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer">Cerrar sesión</button>
+      </div>
+    </div>`;
+  }
+
+  screenReview() {
+    const parts = [
+      { id:42, role:'Conductor' },
+      { id:87, role:'Pasajero'  },
+    ];
+    return `<div style="background:#F2F4F7;min-height:736px">
+      ${this.header('Calificar viaje','home')}
+      <div style="padding:18px">
+        <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:4px;letter-spacing:-0.3px">Calificar participantes</div>
+        <div style="display:flex;align-items:center;gap:5px;color:#9CA3AF;font-size:13px;margin-bottom:3px">${this.icon('clock',14,'#9CA3AF')} Lun 15 Abr · 07:00</div>
+        <div style="display:flex;align-items:center;gap:5px;color:#9CA3AF;font-size:13px;margin-bottom:20px">${this.icon('location',14,'#9CA3AF')} Miraflores, Óvalo</div>
+
+        <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin-bottom:10px">PARTICIPANTES</div>
+        ${parts.map((p,i)=>`
+          <div style="border:${i===0?'2px solid #18A8E0':'1.5px solid #E5E7EB'};border-radius:10px;padding:13px 14px;background:${i===0?'#EFF9FE':'#fff'};margin-bottom:8px;cursor:pointer">
+            <div style="font-size:12px;font-weight:700;color:${i===0?'#18A8E0':'#9CA3AF'};letter-spacing:0.4px;margin-bottom:2px">${p.role.toUpperCase()}</div>
+            <div style="font-size:14px;font-weight:600;color:#111827">Estudiante UTEC #${p.id}</div>
+          </div>`).join('')}
+
+        <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:0.5px;margin:16px 0 10px">CALIFICACIÓN</div>
+        <div style="display:flex;gap:10px;margin-bottom:20px">
+          ${[1,2,3,4,5].map(n=>`
+            <div style="flex:1;aspect-ratio:1;border-radius:10px;background:${n<=4?'#0B1F3A':'#F3F4F6'};display:flex;align-items:center;justify-content:center;cursor:pointer">
+              ${this.icon('star',18,n<=4?'#F5C518':'#D1D5DB')}
+            </div>`).join('')}
+        </div>
+        ${this.field('Comentario (opcional, máx. 500)','¿Cómo fue la experiencia?')}
+        ${this.btn('Enviar calificación')}
+      </div>
+    </div>`;
+  }
+
+  renderVals() { return {}; }
+}
+
+</script>
+</body>
+</html>
