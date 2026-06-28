@@ -6,6 +6,7 @@ import { useVehicles } from '../hooks/useVehicles';
 import { useAuth } from '../hooks/useAuth';
 import { AppInput } from '../components/AppInput';
 import { AppButton } from '../components/AppButton';
+import { DateTimePicker } from '../components/DateTimePicker';
 import { toLocalIso } from '../utils/formatters';
 import { getCurrentCoords } from '../utils/locationHelpers';
 import { parseAxiosError } from '../utils/errorMessages';
@@ -22,8 +23,7 @@ export const PublishTripScreen = ({ navigation }: any) => {
   const [destination, setDestination] = useState('');
   const [seats, setSeats] = useState('');
   const [vehicleId, setVehicleId] = useState<number|null>(null);
-  const [departureDate, setDepartureDate] = useState('');
-  const [departureTime, setDepartureTime] = useState('');
+  const [departure, setDeparture] = useState<Date|null>(null);
   const [useGPS, setUseGPS] = useState(false);
   const [coords, setCoords] = useState<{lat:number,lng:number}|null>(null);
   const [loadingGPS, setLoadingGPS] = useState(false);
@@ -54,8 +54,8 @@ export const PublishTripScreen = ({ navigation }: any) => {
         if (v && s > v.seats) e.seats = `Máximo ${v.seats} para este vehículo`;
       }
     }
-    if (!departureDate.match(/^d{4}-d{2}-d{2}$/)) e.date = 'Formato YYYY-MM-DD';
-    if (!departureTime.match(/^d{2}:d{2}$/)) e.time = 'Formato HH:MM';
+    if (!departure) e.datetime = 'Selecciona la fecha y hora de salida';
+    else if (departure.getTime() < Date.now()) e.datetime = 'La salida debe ser en el futuro';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -63,7 +63,7 @@ export const PublishTripScreen = ({ navigation }: any) => {
   const handleSubmit = async () => {
     if (!validate()) return;
     setSubmitting(true);
-    const dt = `${departureDate}T${departureTime}:00`;
+    const dt = toLocalIso(departure!);
     try {
       await publicationService.create({
         fromUTEC, driverToPassenger: mode === 'driver',
@@ -119,10 +119,7 @@ export const PublishTripScreen = ({ navigation }: any) => {
         <AppInput label="Asientos disponibles" value={seats} onChangeText={setSeats}
           keyboardType="number-pad" placeholder="2" error={errors.seats} />
 
-        <AppInput label="Fecha de salida (YYYY-MM-DD)" value={departureDate} onChangeText={setDepartureDate}
-          placeholder="2025-04-15" error={errors.date} />
-        <AppInput label="Hora de salida (HH:MM)" value={departureTime} onChangeText={setDepartureTime}
-          keyboardType="numbers-and-punctuation" placeholder="07:30" error={errors.time} />
+        <DateTimePicker label="Fecha y hora de salida" value={departure} onChange={setDeparture} error={errors.datetime} />
 
         {mode === 'driver' && (
           <>

@@ -7,6 +7,7 @@ import { LoadingState } from '../components/LoadingState';
 import { WelcomeScreen }     from '../screens/WelcomeScreen';
 import { LoginScreen }       from '../screens/LoginScreen';
 import { RegisterScreen }    from '../screens/RegisterScreen';
+import { SetupVehicleScreen } from '../screens/SetupVehicleScreen';
 import { HomeScreen }        from '../screens/HomeScreen';
 import { SearchTripsScreen } from '../screens/SearchTripsScreen';
 import { TripDetailScreen }  from '../screens/TripDetailScreen';
@@ -27,7 +28,7 @@ const screenOptions = {
 };
 
 export const AppNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, pendingVehicleSetup } = useAuth();
 
   if (isLoading) return <LoadingState message="Restaurando sesión..." />;
 
@@ -39,6 +40,11 @@ export const AppNavigator = () => {
             <Stack.Screen name="Welcome"  component={WelcomeScreen}  options={{ headerShown: false }} />
             <Stack.Screen name="Login"    component={LoginScreen}    options={{ title: 'Iniciar sesión' }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Crear cuenta' }} />
+          </>
+        ) : pendingVehicleSetup ? (
+          <>
+            <Stack.Screen name="SetupVehicle" component={SetupVehicleScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Vehicle"      component={VehicleScreen}      options={{ title: 'Registrar vehículo' }} />
           </>
         ) : (
           <>

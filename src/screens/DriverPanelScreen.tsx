@@ -119,10 +119,14 @@ export const DriverPanelScreen = ({ navigation }: any) => {
         : <ScrollView contentContainerStyle={s.scroll}>
             {myPubData.map(({ pub, requests, loadingReqs }) => (
               <View key={pub.id} style={s.pubSection}>
-                <View style={s.pubHeader}>
+                <TouchableOpacity
+                  style={s.pubHeader}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('TripDetail', { publicationId: pub.id })}
+                >
                   <Text style={s.pubTitle} numberOfLines={1}>{pub.titulo}</Text>
-                  <Text style={s.pubMeta}>{pub.driverToPassenger ? '🚗 Conductor' : '🙋 Pasajero'}</Text>
-                </View>
+                  <Text style={s.pubMeta}>{pub.driverToPassenger ? '🚗 Conductor' : '🙋 Pasajero'}  ›</Text>
+                </TouchableOpacity>
                 {loadingReqs
                   ? <LoadingState message="Cargando solicitudes..." />
                   : requests.length === 0

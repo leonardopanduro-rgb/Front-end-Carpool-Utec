@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppInput } from '../components/AppInput';
 import { AppButton } from '../components/AppButton';
+import { OptionsModal } from '../components/OptionsModal';
 import { authService } from '../services/auth';
 import { useAuth } from '../hooks/useAuth';
 import { CAREERS } from '../data/careers';
@@ -10,9 +11,8 @@ import { isUtecEmail, isValidPassword, isValidPhone, isValidStudentCode, isValid
 import { parseAxiosError } from '../utils/errorMessages';
 
 export const RegisterScreen = ({ navigation }: any) => {
-  const { login } = useAuth();
+  const { login, setPendingVehicleSetup } = useAuth();
   const [form, setForm] = useState({ name:'',lastName:'',email:'',password:'',confirm:'',phone:'',studentCode:'',career:'',cycle:'' });
-  const [intent, setIntent] = useState<'passenger'|'driver'>('passenger');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string,string>>({});
   const [showCareer, setShowCareer] = useState(false);
@@ -21,22 +21,26 @@ export const RegisterScreen = ({ navigation }: any) => {
 
   const validate = () => {
     const e: Record<string,string> = {};
-    if (!form.name.trim()) e.name = 'Requerido';
-    if (!form.lastName.trim()) e.lastName = 'Requerido';
-    if (!isUtecEmail(form.email)) e.email = 'Debe ser @utec.edu.pe';
-    if (!isValidPassword(form.password)) e.password = 'Mínimo 8 caracteres con letras y números';
+    if (!form.name.trim()) e.name = 'Ingresa tu nombre';
+    if (!form.lastName.trim()) e.lastName = 'Ingresa tu apellido';
+    if (!isUtecEmail(form.email)) e.email = 'El correo debe ser @utec.edu.pe';
+    if (!isValidPassword(form.password)) e.password = 'Contraseña: mínimo 8 caracteres con letras y números';
     if (form.password !== form.confirm) e.confirm = 'Las contraseñas no coinciden';
-    if (!isValidPhone(form.phone)) e.phone = 'Exactamente 9 dígitos';
-    if (!isValidStudentCode(form.studentCode)) e.studentCode = 'Formato U + 9 dígitos (ej. U202600001)';
+    if (!isValidPhone(form.phone)) e.phone = 'El teléfono debe tener 9 dígitos';
+    if (!isValidStudentCode(form.studentCode)) e.studentCode = 'Código con formato U + 9 dígitos (ej. U202600001)';
     if (!isValidCareer(form.career)) e.career = 'Selecciona una carrera';
     const cycleNum = parseInt(form.cycle);
-    if (!isValidCycle(cycleNum)) e.cycle = 'Ciclo entre 1 y 12';
+    if (!isValidCycle(cycleNum)) e.cycle = 'El ciclo debe estar entre 1 y 12';
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return e;
   };
 
   const handleRegister = async () => {
-    if (!validate()) return;
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      Alert.alert('Revisa el formulario', Object.values(errs).join('\n'));
+      return;
+    }
     setLoading(true);
     try {
       const res = await authService.register({
@@ -45,8 +49,9 @@ export const RegisterScreen = ({ navigation }: any) => {
         phone: form.phone.trim(), studentCode: form.studentCode.trim(),
         career: form.career, cycle: parseInt(form.cycle),
       });
+      // Tras guardar la cuenta vamos a la pantalla de configurar vehículo (registrar u omitir).
+      setPendingVehicleSetup(true);
       await login(res.accessToken, res.refreshToken, res.user);
-      if (intent === 'driver') navigation.replace('Vehicle');
     } catch (err: any) {
       const e = parseAxiosError(err);
       Alert.alert('Error al registrarse', e.message);
@@ -69,36 +74,27 @@ export const RegisterScreen = ({ navigation }: any) => {
         <AppInput label="Ciclo" value={form.cycle} onChangeText={v=>set('cycle',v)} keyboardType="number-pad" placeholder="1–12" error={errors.cycle}/>
 
         <Text style={styles.fieldLabel}>Carrera</Text>
-        <TouchableOpacity style={[styles.select, errors.career && styles.selectErr]} onPress={() => setShowCareer(v=>!v)}>
+        <TouchableOpacity style={[styles.select, styles.selectRow, errors.career && styles.selectErr]} onPress={() => setShowCareer(true)}>
           <Text style={selectedCareer ? styles.selectVal : styles.selectPlaceholder}>
             {selectedCareer ? selectedCareer.label : 'Selecciona tu carrera'}
           </Text>
+          <Text style={styles.chevron}>▾</Text>
         </TouchableOpacity>
-        {showCareer && (
-          <View style={styles.dropdown}>
-            {CAREERS.map(c => (
-              <TouchableOpacity key={c.value} style={styles.dropItem} onPress={() => { set('career', c.value); setShowCareer(false); }}>
-                <Text style={[styles.dropTxt, form.career === c.value && styles.dropSelected]}>{c.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
         {errors.career ? <Text style={styles.err}>{errors.career}</Text> : null}
-
-        <Text style={styles.fieldLabel}>¿Cómo quieres empezar hoy?</Text>
-        <View style={styles.intentRow}>
-          {(['passenger','driver'] as const).map(opt => (
-            <TouchableOpacity key={opt} style={[styles.intentBtn, intent===opt && styles.intentActive]} onPress={() => setIntent(opt)}>
-              <Text style={[styles.intentTxt, intent===opt && styles.intentActiveTxt]}>
-                {opt === 'passenger' ? '🙋 Buscar movilidad' : '🚗 Publicar como conductor'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
 
         <AppButton title="Crear cuenta" onPress={handleRegister} loading={loading} style={styles.btn}/>
         <AppButton title="Ya tengo cuenta" onPress={() => navigation.navigate('Login')} variant="outline" style={styles.link}/>
       </ScrollView>
+
+      <OptionsModal
+        visible={showCareer}
+        title="Selecciona tu carrera"
+        options={CAREERS}
+        selected={form.career}
+        onSelect={(v) => set('career', v)}
+        onClose={() => setShowCareer(false)}
+        searchable
+      />
     </SafeAreaView>
   );
 };
@@ -109,6 +105,8 @@ const styles = StyleSheet.create({
   title:{fontSize:24,fontWeight:'800',color:'#0B1F3A',marginBottom:20},
   fieldLabel:{fontSize:13,fontWeight:'600',color:'#0B1F3A',marginBottom:6},
   select:{borderWidth:1.5,borderColor:'#D0D9E8',borderRadius:10,backgroundColor:'#fff',height:48,justifyContent:'center',paddingHorizontal:14,marginBottom:4},
+  selectRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  chevron:{color:'#8A9BB0',fontSize:14},
   selectErr:{borderColor:'#E53E3E'},
   selectVal:{color:'#0B1F3A',fontSize:15},
   selectPlaceholder:{color:'#8A9BB0',fontSize:15},

@@ -1,28 +1,43 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePublications } from '../hooks/usePublications';
+import { useRequests } from '../hooks/useRequests';
+import { useRides } from '../hooks/useRides';
 import { useAuth } from '../hooks/useAuth';
 import { TripCard } from '../components/TripCard';
 import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { DISTRICT_NAMES } from '../data/limaPlaces';
-import { Publication } from '../types/publication';
 
 type Direction = 'all'|'fromUTEC'|'toUTEC';
 type Kind = 'all'|'offers'|'seeks';
 
 export const SearchTripsScreen = ({ navigation }: any) => {
   const { publications, loading, error, fetch } = usePublications();
+  const { requests, fetch: fetchReqs } = useRequests();
   const { user } = useAuth();
-  const [direction, setDirection] = useState<Direction>('all');
-  const [kind, setKind] = useState<Kind>('all');
-  const [district, setDistrict] = useState('');
+  const { myRides, fetch: fetchRides } = useRides(user?.id ?? null);
+  const [direction, setDirection] = React.useState<Direction>('all');
+  const [kind, setKind] = React.useState<Kind>('all');
+  const [district, setDistrict] = React.useState('');
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); fetchReqs(); fetchRides(); }, []);
+
+  // Publicaciones ya confirmadas por el usuario (viaje creado o solicitud aceptada).
+  const confirmedPubIds = new Set<number>([
+    ...myRides.map(m => m.ride.publicationId),
+    ...requests.filter(r => r.requesterId === user?.id && r.status === 'ACCEPTED').map(r => r.publicationId),
+  ]);
+  // Publicaciones con una solicitud pendiente mía.
+  const pendingPubIds = new Set(
+    requests.filter(r => r.requesterId === user?.id && r.status === 'PENDING').map(r => r.publicationId)
+  );
 
   const filtered = publications.filter(p => {
+    if (p.authorId === user?.id) return false;          // no muestres tus propias publicaciones
+    if (confirmedPubIds.has(p.id)) return false;        // si ya confirmaste, ya no es "disponible"
     if (direction === 'fromUTEC' && !p.fromUTEC) return false;
     if (direction === 'toUTEC' && p.fromUTEC) return false;
     if (kind === 'offers' && !p.driverToPassenger) return false;
@@ -64,7 +79,8 @@ export const SearchTripsScreen = ({ navigation }: any) => {
           keyExtractor={p=>String(p.id)}
           contentContainerStyle={styles.list}
           renderItem={({item})=>(
-            <TripCard pub={item} isOwn={item.authorId===user?.id}
+            <TripCard pub={item}
+              statusBadge={pendingPubIds.has(item.id) ? 'Pendiente' : undefined}
               onPress={()=>navigation.navigate('TripDetail',{publicationId:item.id})} />
           )}
           ListEmptyComponent={<EmptyState title="No hay viajes disponibles" subtitle="Prueba cambiando los filtros" />}
