@@ -5,20 +5,30 @@ import { StatusBadge } from './StatusBadge';
 import { AppButton } from './AppButton';
 import { formatDateTime } from '../utils/formatters';
 
-interface Props { req: RequestPublication; onCancel?: () => void; cancelling?: boolean; }
+interface Props {
+  req: RequestPublication;
+  onCancel?: () => void;
+  cancelling?: boolean;
+  onViewPublication?: () => void;
+}
 
-export const RequestCard: React.FC<Props> = ({ req, onCancel, cancelling }) => (
+export const RequestCard: React.FC<Props> = ({ req, onCancel, cancelling, onViewPublication }) => (
   <View style={styles.card}>
     <View style={styles.row}>
-      <Text style={styles.pub}>Publicación #{req.publicationId}</Text>
+      <Text style={styles.pub}>{req.requesterIsDriver ? '🚗 Ofreciste llevar' : '🙋 Pediste asiento'}</Text>
       <StatusBadge status={req.status} />
     </View>
     <Text style={styles.pickup}>📍 Punto: {req.pickupPointOrDestine}</Text>
     <Text style={styles.seats}>💺 Asientos: {req.seats}</Text>
     {req.message ? <Text style={styles.msg}>"{req.message}"</Text> : null}
-    {req.status === 'PENDING' && onCancel && (
-      <AppButton title="Cancelar solicitud" onPress={onCancel} variant="danger" loading={cancelling} style={styles.btn} />
-    )}
+    <View style={styles.actions}>
+      {onViewPublication && (
+        <AppButton title="Ver publicación" onPress={onViewPublication} variant="outline" style={styles.flexBtn} />
+      )}
+      {req.status === 'PENDING' && onCancel && (
+        <AppButton title="Cancelar" onPress={onCancel} variant="danger" loading={cancelling} style={styles.flexBtn} />
+      )}
+    </View>
   </View>
 );
 
@@ -29,5 +39,6 @@ const styles = StyleSheet.create({
   pickup: { fontSize: 13, color: '#4A5568', marginBottom: 4 },
   seats: { fontSize: 13, color: '#4A5568', marginBottom: 4 },
   msg: { fontSize: 13, color: '#8A9BB0', fontStyle: 'italic', marginBottom: 8 },
-  btn: { marginTop: 8 },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  flexBtn: { flex: 1 },
 });

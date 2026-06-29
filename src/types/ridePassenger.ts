@@ -4,4 +4,7 @@ export interface RidePassenger {
   rideId: number;
   seatsReserved: number;
   pickupPoint: string;
+  passengerName?: string | null;
+  passengerCareer?: string | null;
+  passengerRating?: number | null;
 }

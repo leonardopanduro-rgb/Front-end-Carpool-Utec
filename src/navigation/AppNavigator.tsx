@@ -17,6 +17,7 @@ import { DriverPanelScreen } from '../screens/DriverPanelScreen';
 import { VehicleScreen }     from '../screens/VehicleScreen';
 import { ProfileScreen }     from '../screens/ProfileScreen';
 import { ReviewScreen }      from '../screens/ReviewScreen';
+import { ConfirmedTripScreen } from '../screens/ConfirmedTripScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -57,6 +58,7 @@ export const AppNavigator = () => {
             <Stack.Screen name="Vehicle"      component={VehicleScreen}      options={{ title: 'Mis vehículos' }} />
             <Stack.Screen name="Profile"      component={ProfileScreen}      options={{ title: 'Mi perfil' }} />
             <Stack.Screen name="Review"       component={ReviewScreen}       options={{ title: 'Calificar viaje' }} />
+            <Stack.Screen name="ConfirmedTrip" component={ConfirmedTripScreen} options={{ title: 'Viaje confirmado' }} />
           </>
         )}
       </Stack.Navigator>

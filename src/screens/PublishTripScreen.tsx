@@ -17,6 +17,7 @@ export const PublishTripScreen = ({ navigation }: any) => {
   const myVehicles = vehicles.filter(v => v.ownerId === user?.id);
 
   const [mode, setMode] = useState<'driver'|'passenger'>('driver'); // driverToPassenger=true | false
+  const blockedDriver = mode === 'driver' && myVehicles.length === 0;
   const [fromUTEC, setFromUTEC] = useState(true);
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -104,6 +105,13 @@ export const PublishTripScreen = ({ navigation }: any) => {
           <ModeBtn m="passenger" label="🙋 Busco conductor" />
         </View>
 
+        {blockedDriver && (
+          <View style={styles.blockBanner}>
+            <Text style={styles.blockTxt}>🔒 Necesitas registrar un vehículo para ofrecer asientos.</Text>
+            <AppButton title="Registrar vehículo" onPress={() => navigation.navigate('Vehicle')} variant="outline" style={{ marginTop: 10 }} />
+          </View>
+        )}
+
         <Text style={styles.fieldLabel}>Sentido del viaje</Text>
         <View style={styles.modeRow}>
           <DirBtn val={true} label="Saliendo de UTEC" />
@@ -116,7 +124,7 @@ export const PublishTripScreen = ({ navigation }: any) => {
           placeholder="Punto exacto de salida, referencias, etc." multiline error={errors.descripcion} />
         <AppInput label={fromUTEC ? 'Destino' : 'Origen'} value={destination} onChangeText={setDestination}
           placeholder="Ej: Miraflores, Av. Larco" error={errors.destination} />
-        <AppInput label="Asientos disponibles" value={seats} onChangeText={setSeats}
+        <AppInput label={mode === 'driver' ? 'Cupos disponibles' : 'Cantidad de pasajeros'} value={seats} onChangeText={setSeats}
           keyboardType="number-pad" placeholder="2" error={errors.seats} />
 
         <DateTimePicker label="Fecha y hora de salida" value={departure} onChange={setDeparture} error={errors.datetime} />
@@ -141,7 +149,7 @@ export const PublishTripScreen = ({ navigation }: any) => {
             onPress={handleGPS} variant="outline" loading={loadingGPS} style={{flex:1}} />
         </View>
 
-        <AppButton title="Publicar viaje" onPress={handleSubmit} loading={submitting} style={{marginTop:8}} />
+        <AppButton title={mode === 'driver' ? 'Publicar viaje' : 'Publicar solicitud'} onPress={handleSubmit} loading={submitting} style={{marginTop:8}} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -162,4 +170,6 @@ const styles = StyleSheet.create({
   vehicleOptTxt:{color:'#0B1F3A',fontSize:13,fontWeight:'600'},
   gpsRow:{marginBottom:12},
   err:{color:'#E53E3E',fontSize:12,marginBottom:8},
+  blockBanner:{backgroundColor:'#FFF8DC',borderRadius:12,padding:14,marginBottom:16},
+  blockTxt:{color:'#B7791F',fontSize:14,fontWeight:'700'},
 });

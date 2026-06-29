@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Alert, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { useVehicles } from '../hooks/useVehicles';
+import { useRides } from '../hooks/useRides';
 import { vehicleService } from '../services/vehicle';
 import { Vehicle, VehicleRequest } from '../types/vehicle';
 import { AppInput } from '../components/AppInput';
@@ -16,6 +17,7 @@ import { parseAxiosError } from '../utils/errorMessages';
 export const VehicleScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const { vehicles, loading, error, fetch } = useVehicles();
+  const { myRides, fetch: fetchRides } = useRides(user?.id ?? null);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [form, setForm] = useState({ plate:'', brand:'', model:'', color:'', seats:'' });
@@ -23,7 +25,7 @@ export const VehicleScreen = ({ navigation }: any) => {
   const [deleting, setDeleting] = useState<number|null>(null);
   const [formErrors, setFormErrors] = useState<Record<string,string>>({});
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); fetchRides(); }, []);
   const myVehicles = vehicles.filter(v => v.ownerId === user?.id);
 
   const openCreate = () => { setEditing(null); setForm({plate:'',brand:'',model:'',color:'',seats:''}); setFormErrors({}); setModal(true); };
@@ -55,7 +57,11 @@ export const VehicleScreen = ({ navigation }: any) => {
   };
 
   const handleDelete = (id: number) => {
-    Alert.alert('Eliminar vehículo','¿Seguro?',[
+    if (myRides.some(m => m.ride.vehicleId === id)) {
+      Alert.alert('No se puede eliminar', 'Este vehículo tiene viajes asociados. No puedes eliminarlo mientras tenga viajes programados.');
+      return;
+    }
+    Alert.alert('Eliminar vehículo','¿Seguro que quieres eliminar este vehículo?',[
       {text:'Cancelar',style:'cancel'},
       {text:'Eliminar',style:'destructive',onPress:async()=>{
         setDeleting(id);
@@ -75,9 +81,9 @@ export const VehicleScreen = ({ navigation }: any) => {
         <AppButton title="+ Agregar" onPress={openCreate} style={styles.addBtn} />
       </View>
       {loading ? <LoadingState /> : error ? <ErrorMessage error={error} onRetry={fetch} /> : myVehicles.length === 0
-        ? <EmptyState title="Sin vehículos registrados" subtitle="Agrega tu auto para publicar como conductor" ctaLabel="Registrar vehículo" onCta={openCreate} />
+        ? <EmptyState title="Aún no tienes vehículos registrados" subtitle="Registra uno para activar el modo conductor" ctaLabel="Agregar vehículo" onCta={openCreate} />
         : <ScrollView contentContainerStyle={{padding:20}}>
-            {myVehicles.map(v => <VehicleCard key={v.id} vehicle={v} onEdit={()=>openEdit(v)} onDelete={()=>handleDelete(v.id)} />)}
+            {myVehicles.map((v, i) => <VehicleCard key={v.id} vehicle={v} tags={i === 0 ? ['Principal'] : undefined} onEdit={()=>openEdit(v)} onDelete={()=>handleDelete(v.id)} />)}
           </ScrollView>}
 
       <Modal visible={modal} animationType="slide" transparent>

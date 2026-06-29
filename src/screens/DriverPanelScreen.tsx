@@ -51,7 +51,15 @@ export const DriverPanelScreen = ({ navigation }: any) => {
     if (pub.driverToPassenger) {
       // Author is driver — use pub.vehicleId directly, no modal needed
       if (!pub.vehicleId) { Alert.alert('Error', 'La publicación no tiene vehículo asignado.'); return; }
-      doAccept(req, pub.vehicleId);
+      const vehicleId = pub.vehicleId;
+      Alert.alert(
+        'Aceptar solicitud',
+        `Aceptar a Solicitante #${req.requesterId} ocupará ${req.seats} de tus ${pub.seats} cupos. ¿Confirmar?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Aceptar solicitud', onPress: () => doAccept(req, vehicleId) },
+        ]
+      );
     } else {
       // Requester is driver — show their vehicles for selection
       setLoadingVehicles(true);
@@ -108,6 +116,32 @@ export const DriverPanelScreen = ({ navigation }: any) => {
   if (error) return <SafeAreaView style={s.safe}><ErrorMessage error={error} onRetry={fetch} /></SafeAreaView>;
 
   const myPubData = pubData.filter(d => d.pub.authorId === user?.id);
+  const driverPubs = myPubData.filter(d => d.pub.driverToPassenger);
+  const passengerPubs = myPubData.filter(d => !d.pub.driverToPassenger);
+
+  const renderPub = ({ pub, requests, loadingReqs }: PubWithRequests) => (
+    <View key={pub.id} style={s.pubSection}>
+      <TouchableOpacity
+        style={s.pubHeader}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('TripDetail', { publicationId: pub.id })}
+      >
+        <Text style={s.pubTitle} numberOfLines={1}>{pub.titulo}</Text>
+        <Text style={s.pubMeta}>Ver detalle ›</Text>
+      </TouchableOpacity>
+      {loadingReqs
+        ? <LoadingState message="Cargando solicitudes..." />
+        : requests.length === 0
+          ? <Text style={s.noReqs}>Sin solicitudes aún</Text>
+          : requests.map(req => (
+              <DriverRequestCard key={req.id} req={req}
+                onAccept={() => initiateAccept(req, pub)}
+                onReject={() => handleReject(req)}
+                accepting={!!processing[`accept-${req.id}`] || loadingVehicles}
+                rejecting={!!processing[`reject-${req.id}`]} />
+            ))}
+    </View>
+  );
 
   return (
     <SafeAreaView style={s.safe}>
@@ -117,29 +151,10 @@ export const DriverPanelScreen = ({ navigation }: any) => {
         ? <EmptyState title="Sin publicaciones" subtitle="Publica un viaje para gestionar solicitudes"
             ctaLabel="Publicar viaje" onCta={() => navigation.navigate('PublishTrip')} />
         : <ScrollView contentContainerStyle={s.scroll}>
-            {myPubData.map(({ pub, requests, loadingReqs }) => (
-              <View key={pub.id} style={s.pubSection}>
-                <TouchableOpacity
-                  style={s.pubHeader}
-                  activeOpacity={0.85}
-                  onPress={() => navigation.navigate('TripDetail', { publicationId: pub.id })}
-                >
-                  <Text style={s.pubTitle} numberOfLines={1}>{pub.titulo}</Text>
-                  <Text style={s.pubMeta}>{pub.driverToPassenger ? '🚗 Conductor' : '🙋 Pasajero'}  ›</Text>
-                </TouchableOpacity>
-                {loadingReqs
-                  ? <LoadingState message="Cargando solicitudes..." />
-                  : requests.length === 0
-                    ? <Text style={s.noReqs}>Sin solicitudes aún</Text>
-                    : requests.map(req => (
-                        <DriverRequestCard key={req.id} req={req}
-                          onAccept={() => initiateAccept(req, pub)}
-                          onReject={() => handleReject(req)}
-                          accepting={!!processing[`accept-${req.id}`] || loadingVehicles}
-                          rejecting={!!processing[`reject-${req.id}`]} />
-                      ))}
-              </View>
-            ))}
+            {driverPubs.length > 0 && <Text style={s.groupTitle}>Solicitudes recibidas en mis viajes</Text>}
+            {driverPubs.map(renderPub)}
+            {passengerPubs.length > 0 && <Text style={s.groupTitle}>Ofertas recibidas para mis pedidos</Text>}
+            {passengerPubs.map(renderPub)}
           </ScrollView>}
 
       {/* Vehicle selector modal for requester-driver case */}
@@ -173,6 +188,7 @@ const s = StyleSheet.create({
   header:{padding:20,paddingBottom:8},
   title:{fontSize:22,fontWeight:'800',color:'#0B1F3A'},
   scroll:{padding:20,paddingTop:8,paddingBottom:40},
+  groupTitle:{fontSize:15,fontWeight:'800',color:'#0B1F3A',marginBottom:12,marginTop:4},
   pubSection:{marginBottom:24},
   pubHeader:{backgroundColor:'#0B1F3A',borderRadius:12,padding:14,marginBottom:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
   pubTitle:{color:'#fff',fontSize:14,fontWeight:'700',flex:1},

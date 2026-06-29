@@ -15,6 +15,8 @@ import { AppError } from '../types/apiError';
 import { isPast, formatDateTime } from '../utils/formatters';
 import { parseAxiosError } from '../utils/errorMessages';
 
+const TAGS = ['Puntualidad', 'Respeto', 'Comunicación', 'Seguridad'];
+
 export const ReviewScreen = ({ route, navigation }: any) => {
   const { rideId } = route.params;
   const { user } = useAuth();
@@ -23,7 +25,8 @@ export const ReviewScreen = ({ route, navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError|null>(null);
   const [reviewedId, setReviewedId] = useState<number|null>(null);
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
+  const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -63,16 +66,21 @@ export const ReviewScreen = ({ route, navigation }: any) => {
   passengers.forEach(p => { if (p.passengerId !== user?.id) participants.push(p.passengerId); });
   const notReviewed = participants.filter(id => !existingReviews.includes(id));
 
+  const toggleTag = (t: string) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+
   const handleSubmit = async () => {
     if (!reviewedId) { Alert.alert('Selecciona','Elige a quién calificar'); return; }
-    if (comment.length > 500) { Alert.alert('Comentario muy largo','Máximo 500 caracteres'); return; }
+    if (rating === 0) { Alert.alert('Elige estrellas','Selecciona una calificación de 1 a 5'); return; }
+    const finalComment = [comment.trim(), tags.length ? `Destacó: ${tags.join(', ')}` : '']
+      .filter(Boolean).join(' · ');
+    if (finalComment.length > 500) { Alert.alert('Comentario muy largo','Máximo 500 caracteres'); return; }
     setSubmitting(true);
     try {
-      await reviewService.create({ rideId, reviewedId, rating, comment: comment.trim() });
+      await reviewService.create({ rideId, reviewedId, rating, comment: finalComment });
       setSubmitted(true);
       setExistingReviews(prev => [...prev, reviewedId]);
-      setReviewedId(null); setComment(''); setRating(5);
-      Alert.alert('Calificación enviada','¡Gracias por tu valoración!');
+      setReviewedId(null); setComment(''); setRating(0); setTags([]);
+      Alert.alert('Gracias por calificar', 'Tu opinión ayuda a mantener segura la comunidad UTEC.');
     } catch(e:any){ Alert.alert('Error',parseAxiosError(e).message); }
     finally{ setSubmitting(false); }
   };
@@ -106,9 +114,23 @@ export const ReviewScreen = ({ route, navigation }: any) => {
               ))}
             </View>
 
-            <AppInput label="Comentario (opcional, máx. 500)" value={comment} onChangeText={setComment}
+            <Text style={s.label}>¿Qué destacó? (opcional)</Text>
+            <View style={s.tagsRow}>
+              {TAGS.map(t => {
+                const active = tags.includes(t);
+                return (
+                  <TouchableOpacity key={t} style={[s.tag, active && s.tagActive]} onPress={() => toggleTag(t)}>
+                    <Text style={[s.tagTxt, active && s.tagTxtActive]}>{t}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <AppInput label="Comentario (opcional)" value={comment} onChangeText={setComment}
               placeholder="¿Cómo fue la experiencia?" multiline />
-            <AppButton title="Enviar calificación" onPress={handleSubmit} loading={submitting} />
+            <Text style={s.counter}>{comment.length}/500</Text>
+            <AppButton title="Enviar calificación" onPress={handleSubmit} loading={submitting}
+              disabled={!reviewedId || rating === 0} />
           </>}
       </ScrollView>
     </SafeAreaView>
@@ -126,9 +148,15 @@ const s = StyleSheet.create({
   participantBtnActive:{borderColor:'#18A8E0',backgroundColor:'#E8F7FD'},
   participantTxt:{color:'#0B1F3A',fontWeight:'600',fontSize:14},
   participantTxtActive:{color:'#18A8E0'},
-  starsRow:{flexDirection:'row',gap:8,marginBottom:20},
+  starsRow:{flexDirection:'row',gap:8,marginBottom:8},
   star:{fontSize:36,color:'#D0D9E8'},
   starActive:{color:'#F5C518'},
+  tagsRow:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:8},
+  tag:{borderRadius:20,borderWidth:1.5,borderColor:'#D0D9E8',paddingHorizontal:12,paddingVertical:6,backgroundColor:'#fff'},
+  tagActive:{borderColor:'#18A8E0',backgroundColor:'#E8F7FD'},
+  tagTxt:{color:'#0B1F3A',fontSize:12,fontWeight:'600'},
+  tagTxtActive:{color:'#18A8E0'},
+  counter:{color:'#8A9BB0',fontSize:12,textAlign:'right',marginBottom:12,marginTop:-6},
   done:{backgroundColor:'#F0FFF4',borderRadius:12,padding:20,alignItems:'center'},
   doneTxt:{color:'#276749',fontWeight:'700',fontSize:15},
   notYet:{fontSize:18,fontWeight:'700',color:'#0B1F3A',textAlign:'center',marginBottom:8},

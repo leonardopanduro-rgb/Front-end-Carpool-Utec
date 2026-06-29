@@ -48,7 +48,7 @@ export const SetupVehicleScreen = ({ navigation }: any) => {
             <AppButton title="Registrar mi vehículo" onPress={() => navigation.navigate('Vehicle')} />
           )}
           <AppButton
-            title={hasVehicle ? 'Entrar como pasajero' : 'Omitir por ahora'}
+            title={hasVehicle ? 'Entrar como pasajero' : 'Continuar como pasajero'}
             onPress={() => finish('passenger')}
             variant="outline"
             style={{ marginTop: 12 }}

@@ -3,9 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Publication } from '../types/publication';
 import { formatDateTime, formatDistance } from '../utils/formatters';
 
-interface Props { pub: Publication; onPress: () => void; isOwn?: boolean; statusBadge?: string; }
+interface Props { pub: Publication; onPress: () => void; isOwn?: boolean; }
 
-export const TripCard: React.FC<Props> = ({ pub, onPress, isOwn, statusBadge }) => {
+export const TripCard: React.FC<Props> = ({ pub, onPress, isOwn }) => {
   const direction = pub.fromUTEC ? 'Saliendo de UTEC' : 'Hacia campus';
   const type = pub.driverToPassenger ? '🚗 Ofrece asiento' : '🙋 Busca conductor';
   return (
@@ -21,8 +21,11 @@ export const TripCard: React.FC<Props> = ({ pub, onPress, isOwn, statusBadge }) 
         <Text style={styles.seats}>💺 {pub.seats}</Text>
         {pub.distanceToUtecKm != null && <Text style={styles.dist}>{formatDistance(pub.distanceToUtecKm)}</Text>}
       </View>
+      <View style={styles.bottom}>
+        <Text style={styles.aporte}>🤝 Aporte a coordinar</Text>
+        <Text style={styles.detail}>Ver detalle ›</Text>
+      </View>
       {isOwn && <View style={styles.ownBadge}><Text style={styles.ownTxt}>Tu publicación</Text></View>}
-      {!isOwn && statusBadge && <View style={styles.statusBadge}><Text style={styles.statusTxt}>{statusBadge}</Text></View>}
     </TouchableOpacity>
   );
 };
@@ -39,8 +42,9 @@ const styles = StyleSheet.create({
   time: { color: '#8A9BB0', fontSize: 12 },
   seats: { color: '#8A9BB0', fontSize: 12 },
   dist: { color: '#18A8E0', fontSize: 12 },
+  bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F2F4F7' },
+  aporte: { color: '#4A5568', fontSize: 12, fontWeight: '600' },
+  detail: { color: '#18A8E0', fontSize: 13, fontWeight: '700' },
   ownBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: '#0B1F3A', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   ownTxt: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  statusBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: '#18A8E0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
-  statusTxt: { color: '#fff', fontSize: 10, fontWeight: '700' },
 });

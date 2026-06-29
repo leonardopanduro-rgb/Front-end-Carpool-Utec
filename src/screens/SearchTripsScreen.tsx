@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { usePublications } from '../hooks/usePublications';
 import { useRequests } from '../hooks/useRequests';
 import { useRides } from '../hooks/useRides';
@@ -11,7 +12,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { DISTRICT_NAMES } from '../data/limaPlaces';
 
-type Direction = 'all'|'fromUTEC'|'toUTEC';
+type Direction = 'all'|'fromUTEC';
 type Kind = 'all'|'offers'|'seeks';
 
 export const SearchTripsScreen = ({ navigation }: any) => {
@@ -22,27 +23,29 @@ export const SearchTripsScreen = ({ navigation }: any) => {
   const [direction, setDirection] = React.useState<Direction>('all');
   const [kind, setKind] = React.useState<Kind>('all');
   const [district, setDistrict] = React.useState('');
+  const [query, setQuery] = React.useState('');
 
-  useEffect(() => { fetch(); fetchReqs(); fetchRides(); }, []);
-
-  // Publicaciones ya confirmadas por el usuario (viaje creado o solicitud aceptada).
-  const confirmedPubIds = new Set<number>([
-    ...myRides.map(m => m.ride.publicationId),
-    ...requests.filter(r => r.requesterId === user?.id && r.status === 'ACCEPTED').map(r => r.publicationId),
-  ]);
-  // Publicaciones con una solicitud pendiente mía.
-  const pendingPubIds = new Set(
-    requests.filter(r => r.requesterId === user?.id && r.status === 'PENDING').map(r => r.publicationId)
+  useFocusEffect(
+    useCallback(() => { fetch(); fetchReqs(); fetchRides(); }, [fetch, fetchReqs, fetchRides])
   );
 
+  // Publicaciones en las que ya participo (solicitud activa o viaje confirmado): fuera de Disponibles.
+  const takenPubIds = new Set<number>([
+    ...myRides.map(m => m.ride.publicationId),
+    ...requests
+      .filter(r => r.requesterId === user?.id && (r.status === 'PENDING' || r.status === 'ACCEPTED'))
+      .map(r => r.publicationId),
+  ]);
+
+  const q = query.trim().toLowerCase();
   const filtered = publications.filter(p => {
-    if (p.authorId === user?.id) return false;          // no muestres tus propias publicaciones
-    if (confirmedPubIds.has(p.id)) return false;        // si ya confirmaste, ya no es "disponible"
+    if (p.authorId === user?.id) return false;
+    if (takenPubIds.has(p.id)) return false;
     if (direction === 'fromUTEC' && !p.fromUTEC) return false;
-    if (direction === 'toUTEC' && p.fromUTEC) return false;
     if (kind === 'offers' && !p.driverToPassenger) return false;
     if (kind === 'seeks' && p.driverToPassenger) return false;
     if (district && !p.destinationOrOrigin.toLowerCase().includes(district.toLowerCase())) return false;
+    if (q && !`${p.titulo} ${p.destinationOrOrigin}`.toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -55,17 +58,23 @@ export const SearchTripsScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.filtersWrap}>
+        <TextInput
+          style={styles.search}
+          placeholder="Buscar por destino o referencia..."
+          placeholderTextColor="#8A9BB0"
+          value={query}
+          onChangeText={setQuery}
+        />
+        <Text style={styles.filterLabel}>Tipo</Text>
+        <View style={styles.chipRow}>
+          <Chip label="Todos" active={kind==='all'} onPress={()=>setKind('all')} />
+          <Chip label="Ofrecen asiento" active={kind==='offers'} onPress={()=>setKind('offers')} />
+          <Chip label="Buscan conductor" active={kind==='seeks'} onPress={()=>setKind('seeks')} />
+        </View>
         <Text style={styles.filterLabel}>Sentido</Text>
         <View style={styles.chipRow}>
           <Chip label="Todos" active={direction==='all'} onPress={()=>setDirection('all')} />
           <Chip label="Saliendo de UTEC" active={direction==='fromUTEC'} onPress={()=>setDirection('fromUTEC')} />
-          <Chip label="Hacia campus" active={direction==='toUTEC'} onPress={()=>setDirection('toUTEC')} />
-        </View>
-        <Text style={styles.filterLabel}>Tipo</Text>
-        <View style={styles.chipRow}>
-          <Chip label="Todos" active={kind==='all'} onPress={()=>setKind('all')} />
-          <Chip label="Ofrece asiento" active={kind==='offers'} onPress={()=>setKind('offers')} />
-          <Chip label="Busca conductor" active={kind==='seeks'} onPress={()=>setKind('seeks')} />
         </View>
         <Text style={styles.filterLabel}>Distrito</Text>
         <View style={styles.chipRow}>
@@ -80,10 +89,9 @@ export const SearchTripsScreen = ({ navigation }: any) => {
           contentContainerStyle={styles.list}
           renderItem={({item})=>(
             <TripCard pub={item}
-              statusBadge={pendingPubIds.has(item.id) ? 'Pendiente' : undefined}
               onPress={()=>navigation.navigate('TripDetail',{publicationId:item.id})} />
           )}
-          ListEmptyComponent={<EmptyState title="No hay viajes disponibles" subtitle="Prueba cambiando los filtros" />}
+          ListEmptyComponent={<EmptyState title="No hay viajes disponibles" subtitle="Prueba cambiando los filtros o la búsqueda" />}
         />}
     </SafeAreaView>
   );
@@ -92,6 +100,7 @@ export const SearchTripsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   safe:{flex:1,backgroundColor:'#F2F4F7'},
   filtersWrap:{padding:16,backgroundColor:'#fff',borderBottomWidth:1,borderBottomColor:'#D0D9E8'},
+  search:{borderWidth:1.5,borderColor:'#D0D9E8',borderRadius:10,height:44,paddingHorizontal:14,color:'#0B1F3A',marginBottom:12},
   filterLabel:{fontSize:12,fontWeight:'700',color:'#0B1F3A',marginBottom:6},
   chipRow:{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:10},
   chip:{borderRadius:20,borderWidth:1.5,borderColor:'#D0D9E8',paddingHorizontal:10,paddingVertical:4,backgroundColor:'#fff'},
