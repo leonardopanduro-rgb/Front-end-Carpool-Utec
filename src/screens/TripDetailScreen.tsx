@@ -9,6 +9,8 @@ import { useAuth } from '../hooks/useAuth';
 import { Publication } from '../types/publication';
 import { AppButton } from '../components/AppButton';
 import { AppInput } from '../components/AppInput';
+import { RouteMap, MapPoint } from '../components/RouteMap';
+import { UTEC } from '../data/utec';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatDateTime, formatDistance } from '../utils/formatters';
@@ -31,6 +33,8 @@ export const TripDetailScreen = ({ route, navigation }: any) => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string,string>>({});
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [fare, setFare] = useState('');
 
   useEffect(() => {
     load();
@@ -73,7 +77,9 @@ export const TripDetailScreen = ({ route, navigation }: any) => {
     try {
       await requestPublicationService.create(pub.id, {
         requesterIsDriver, seats: parseInt(seats), message: message.trim(),
-        pickupPointOrDestine: pickup.trim(), externalLatitude: null, externalLongitude: null,
+        pickupPointOrDestine: pickup.trim(),
+        externalLatitude: pickupCoords?.lat ?? null, externalLongitude: pickupCoords?.lng ?? null,
+        proposedFare: fare.trim() ? Number(fare) : null,
       });
       setSubmitted(true);
       Alert.alert('Solicitud enviada','Tu solicitud fue enviada. El conductor la revisará pronto.');
@@ -85,6 +91,12 @@ export const TripDetailScreen = ({ route, navigation }: any) => {
   if (loading) return <LoadingState message="Cargando viaje..." />;
   if (error) return <SafeAreaView style={s.safe}><ErrorMessage error={error} onRetry={load} /></SafeAreaView>;
   if (!pub) return null;
+
+  const pubPoint: MapPoint = (pub.externalLatitude != null && pub.externalLongitude != null)
+    ? { lat: pub.externalLatitude, lng: pub.externalLongitude }
+    : pub.destinationOrOrigin;
+  const mapOrigin = pub.fromUTEC ? UTEC : pubPoint;
+  const mapDestination = pub.fromUTEC ? pubPoint : UTEC;
 
   return (
     <SafeAreaView style={s.safe}>
@@ -107,6 +119,9 @@ export const TripDetailScreen = ({ route, navigation }: any) => {
           {weather && <InfoRow icon={weather.emoji} label="Clima en UTEC" value={weather.description + " " + weather.temperature + "°C"} />}
         </View>
 
+        <Text style={s.routeTitle}>Ruta del viaje</Text>
+        <RouteMap origin={mapOrigin} destination={mapDestination} />
+
         <View style={s.trustCard}>
           <Text style={s.trustTitle}>🔒 Confianza y seguridad</Text>
           <Text style={s.trustItem}>✓ Cuenta UTEC verificada (correo institucional)</Text>
@@ -126,6 +141,9 @@ export const TripDetailScreen = ({ route, navigation }: any) => {
             )}
             <AppInput label="Punto de recojo / destino" value={pickup} onChangeText={setPickup}
               placeholder="Ej: Óvalo Miraflores, altura BCP" error={formErrors.pickup} />
+            <Text style={s.mapHint}>Toca el mapa para marcar tu punto exacto (opcional):</Text>
+            <RouteMap origin={mapOrigin} destination={mapDestination} pickable onPick={setPickupCoords} height={200} />
+            {pickupCoords ? <Text style={s.picked}>📍 Punto marcado en el mapa ✓</Text> : null}
             {requesterIsDriver ? (
               <AppInput label="Asientos que ofreces" value={seats} onChangeText={setSeats}
                 keyboardType="number-pad" placeholder="1" error={formErrors.seats} />
@@ -145,6 +163,8 @@ export const TripDetailScreen = ({ route, navigation }: any) => {
                 {formErrors.seats ? <Text style={s.seatErr}>{formErrors.seats}</Text> : null}
               </View>
             )}
+            <AppInput label="Tarifa que ofreces (S/, opcional)" value={fare} onChangeText={setFare}
+              keyboardType="decimal-pad" placeholder="Ej: 5" />
             <AppInput label="Mensaje (opcional)" value={message} onChangeText={setMessage}
               placeholder="Ej: Llego 5 min antes al punto" multiline />
             <AppButton title={requesterIsDriver ? 'Ofrecer llevar' : 'Solicitar asiento'} onPress={handleRequest} loading={submitting}
@@ -182,6 +202,9 @@ const s = StyleSheet.create({
   seatChipTxt:{fontSize:16,fontWeight:'800',color:'#0B1F3A'},
   seatChipActiveTxt:{color:'#fff'},
   seatErr:{color:'#E53E3E',fontSize:12,marginTop:6},
+  routeTitle:{fontSize:15,fontWeight:'800',color:'#0B1F3A',marginBottom:10},
+  mapHint:{fontSize:13,fontWeight:'600',color:'#0B1F3A',marginBottom:8},
+  picked:{fontSize:13,color:'#1B8A5A',fontWeight:'700',marginTop:-12,marginBottom:14},
   trustCard:{backgroundColor:'#fff',borderRadius:14,padding:16,marginBottom:20,borderLeftWidth:4,borderLeftColor:'#1B8A5A'},
   trustTitle:{fontSize:14,fontWeight:'800',color:'#0B1F3A',marginBottom:8},
   trustItem:{fontSize:13,color:'#4A5568',marginBottom:4},

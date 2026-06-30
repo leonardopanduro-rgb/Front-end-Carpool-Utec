@@ -27,4 +27,12 @@ export const requestPublicationService = {
     try { const r = await api.patch<RequestPublication>(`/request-publications/${id}/reject`); return r.data; }
     catch (e) { throw parseAxiosError(e); }
   },
+  counter: async (id: number, counterFare: number): Promise<RequestPublication> => {
+    try { const r = await api.patch<RequestPublication>(`/request-publications/${id}/counter`, { counterFare }); return r.data; }
+    catch (e) { throw parseAxiosError(e); }
+  },
+  acceptCounter: async (id: number, vehicleId?: number): Promise<RequestPublication> => {
+    try { const r = await api.patch<RequestPublication>(`/request-publications/${id}/accept-counter`, vehicleId != null ? { vehicleId } : {}); return r.data; }
+    catch (e) { throw parseAxiosError(e); }
+  },
 };

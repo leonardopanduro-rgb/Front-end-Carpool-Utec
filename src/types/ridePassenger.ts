@@ -7,4 +7,6 @@ export interface RidePassenger {
   passengerName?: string | null;
   passengerCareer?: string | null;
   passengerRating?: number | null;
+  pickupLatitude?: number | null;
+  pickupLongitude?: number | null;
 }

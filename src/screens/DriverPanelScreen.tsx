@@ -14,6 +14,7 @@ import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { AppButton } from '../components/AppButton';
+import { AppInput } from '../components/AppInput';
 import { parseAxiosError } from '../utils/errorMessages';
 
 interface PubWithRequests { pub: Publication; requests: RequestPublication[]; loadingReqs: boolean; }
@@ -30,6 +31,11 @@ export const DriverPanelScreen = ({ navigation }: any) => {
   const [requesterVehicles, setRequesterVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
+
+  // Counter-offer modal state
+  const [counterModal, setCounterModal] = useState(false);
+  const [counterTarget, setCounterTarget] = useState<RequestPublication | null>(null);
+  const [counterValue, setCounterValue] = useState('');
 
   useEffect(() => { fetch(); }, []);
 
@@ -112,6 +118,31 @@ export const DriverPanelScreen = ({ navigation }: any) => {
     }
   };
 
+  const openCounter = (req: RequestPublication) => {
+    setCounterTarget(req);
+    setCounterValue(req.proposedFare != null ? String(req.proposedFare) : '');
+    setCounterModal(true);
+  };
+
+  const confirmCounter = async () => {
+    if (!counterTarget) return;
+    const fare = Number(counterValue);
+    if (isNaN(fare) || fare < 0) { Alert.alert('Tarifa inválida', 'Ingresa un monto válido en S/.'); return; }
+    const req = counterTarget;
+    setCounterModal(false);
+    const key = `counter-${req.id}`;
+    setProcessing(p => ({ ...p, [key]: true }));
+    try {
+      const updated = await requestPublicationService.counter(req.id, fare);
+      setPubData(prev => prev.map(d => ({ ...d, requests: d.requests.map(r => r.id === req.id ? updated : r) })));
+    } catch (e: any) {
+      Alert.alert('Error al contraofertar', parseAxiosError(e).message);
+    } finally {
+      setProcessing(p => ({ ...p, [key]: false }));
+      setCounterTarget(null);
+    }
+  };
+
   if (loading) return <LoadingState message="Cargando tus publicaciones..." />;
   if (error) return <SafeAreaView style={s.safe}><ErrorMessage error={error} onRetry={fetch} /></SafeAreaView>;
 
@@ -137,8 +168,10 @@ export const DriverPanelScreen = ({ navigation }: any) => {
               <DriverRequestCard key={req.id} req={req}
                 onAccept={() => initiateAccept(req, pub)}
                 onReject={() => handleReject(req)}
+                onCounter={() => openCounter(req)}
                 accepting={!!processing[`accept-${req.id}`] || loadingVehicles}
-                rejecting={!!processing[`reject-${req.id}`]} />
+                rejecting={!!processing[`reject-${req.id}`]}
+                countering={!!processing[`counter-${req.id}`]} />
             ))}
     </View>
   );
@@ -175,6 +208,24 @@ export const DriverPanelScreen = ({ navigation }: any) => {
               <AppButton title="Confirmar aceptar" onPress={confirmAcceptWithVehicle} />
               <AppButton title="Cancelar" onPress={() => { setVehicleModal(false); setPendingAccept(null); }}
                 variant="outline" style={{ marginTop: 10 }} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={counterModal} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Contraofertar tarifa</Text>
+            <Text style={s.modalSub}>
+              {counterTarget?.proposedFare != null
+                ? `El solicitante ofrece S/ ${counterTarget.proposedFare}. Propón tu monto:`
+                : 'Propón un monto de aporte (S/):'}
+            </Text>
+            <AppInput label="Tu tarifa (S/)" value={counterValue} onChangeText={setCounterValue} keyboardType="decimal-pad" placeholder="Ej: 7" />
+            <View style={s.modalActions}>
+              <AppButton title="Enviar contraoferta" onPress={confirmCounter} />
+              <AppButton title="Cancelar" onPress={() => { setCounterModal(false); setCounterTarget(null); }} variant="outline" style={{ marginTop: 10 }} />
             </View>
           </View>
         </View>

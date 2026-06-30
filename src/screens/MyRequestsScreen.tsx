@@ -5,6 +5,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRequests } from '../hooks/useRequests';
 import { useAuth } from '../hooks/useAuth';
 import { requestPublicationService } from '../services/requestPublication';
+import { publicationService } from '../services/publication';
+import { vehicleService } from '../services/vehicle';
 import { RequestCard } from '../components/RequestCard';
 import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
@@ -15,6 +17,7 @@ import { RequestPublication, RequestStatus } from '../types/requestPublication';
 type Tab = RequestStatus;
 const TABS: { key: Tab; label: string }[] = [
   { key: 'PENDING', label: 'Pendientes' },
+  { key: 'COUNTERED', label: 'Contraofertas' },
   { key: 'ACCEPTED', label: 'Aceptadas' },
   { key: 'REJECTED', label: 'Rechazadas' },
   { key: 'CANCELLED', label: 'Canceladas' },
@@ -22,6 +25,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 const EMPTY: Record<Tab, string> = {
   PENDING: 'Aún no tienes solicitudes pendientes. Busca un viaje desde UTEC para empezar.',
+  COUNTERED: 'No tienes contraofertas. Cuando un conductor proponga otra tarifa, aparecerá aquí.',
   ACCEPTED: 'No tienes solicitudes aceptadas todavía.',
   REJECTED: 'No tienes solicitudes rechazadas.',
   CANCELLED: 'No tienes solicitudes canceladas.',
@@ -31,6 +35,7 @@ export const MyRequestsScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const { requests, setRequests, loading, error, fetch } = useRequests();
   const [cancelling, setCancelling] = useState<number|null>(null);
+  const [accepting, setAccepting] = useState<number|null>(null);
   const [tab, setTab] = useState<Tab>('PENDING');
 
   useFocusEffect(useCallback(() => { fetch(); }, [fetch]));
@@ -53,6 +58,24 @@ export const MyRequestsScreen = ({ navigation }: any) => {
     ]);
   };
 
+  const handleAcceptCounter = async (req: RequestPublication) => {
+    setAccepting(req.id);
+    try {
+      const pub = await publicationService.getById(req.publicationId);
+      let vehicleId: number | undefined;
+      if (pub.driverToPassenger) {
+        vehicleId = pub.vehicleId ?? undefined;
+      } else {
+        const vs = await vehicleService.getAll();
+        vehicleId = vs.find(v => v.ownerId === user?.id)?.id;
+      }
+      const updated = await requestPublicationService.acceptCounter(req.id, vehicleId);
+      setRequests(prev => prev.map(r => r.id === req.id ? updated : r));
+      Alert.alert('Tarifa aceptada', 'Aceptaste la contraoferta. ¡Viaje confirmado!');
+    } catch (e: any) { Alert.alert('Error', parseAxiosError(e).message); }
+    finally { setAccepting(null); }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}><Text style={styles.title}>Mis solicitudes</Text></View>
@@ -69,8 +92,10 @@ export const MyRequestsScreen = ({ navigation }: any) => {
           renderItem={({item})=>(
             <RequestCard req={item}
               onViewPublication={()=>navigation.navigate('TripDetail',{publicationId:item.publicationId})}
-              onCancel={item.status==='PENDING'?()=>handleCancel(item):undefined}
-              cancelling={cancelling===item.id} />
+              onCancel={(item.status==='PENDING'||item.status==='COUNTERED')?()=>handleCancel(item):undefined}
+              cancelling={cancelling===item.id}
+              onAcceptCounter={item.status==='COUNTERED'?()=>handleAcceptCounter(item):undefined}
+              accepting={accepting===item.id} />
           )}
           ListEmptyComponent={
             <EmptyState title="Sin solicitudes" subtitle={EMPTY[tab]}

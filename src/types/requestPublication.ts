@@ -1,4 +1,4 @@
-export type RequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+export type RequestStatus = 'PENDING' | 'COUNTERED' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
 
 export interface RequestPublication {
   id: number;
@@ -14,6 +14,9 @@ export interface RequestPublication {
   requesterName?: string | null;
   requesterCareer?: string | null;
   requesterRating?: number | null;
+  proposedFare?: number | null;
+  counterFare?: number | null;
+  agreedFare?: number | null;
 }
 
 export interface RequestPublicationRequest {
@@ -23,6 +26,7 @@ export interface RequestPublicationRequest {
   pickupPointOrDestine: string;
   externalLatitude: number | null;
   externalLongitude: number | null;
+  proposedFare?: number | null;
 }
 
 export interface AcceptRequest {

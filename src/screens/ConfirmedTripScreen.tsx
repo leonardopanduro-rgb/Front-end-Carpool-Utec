@@ -9,6 +9,8 @@ import { Ride } from '../types/ride';
 import { RidePassenger } from '../types/ridePassenger';
 import { Vehicle } from '../types/vehicle';
 import { AppButton } from '../components/AppButton';
+import { RouteMap, MapPoint } from '../components/RouteMap';
+import { UTEC } from '../data/utec';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { AppError } from '../types/apiError';
@@ -55,10 +57,30 @@ export const ConfirmedTripScreen = ({ route, navigation }: any) => {
   const isDriver = ride.driverId === user?.id;
   const past = isPast(ride.departureTime);
 
+  const fmtQ = (q: string) => encodeURIComponent(`${q}, Lima, Peru`);
+  const utecQ = `${UTEC.lat},${UTEC.lng}`;
+  const mapOrigin: MapPoint = ride.fromUTEC ? UTEC : ride.destinationOrOrigin;
+  const mapDestination: MapPoint = ride.fromUTEC ? ride.destinationOrOrigin : UTEC;
+
+  // Prefiere las coordenadas exactas de la parada; si no, usa el texto geocodificable.
+  const pointOf = (p: RidePassenger): MapPoint | null =>
+    (p.pickupLatitude != null && p.pickupLongitude != null)
+      ? { lat: p.pickupLatitude, lng: p.pickupLongitude }
+      : (p.pickupPoint && p.pickupPoint.trim() ? p.pickupPoint : null);
+  const queryOf = (p: RidePassenger): string =>
+    (p.pickupLatitude != null && p.pickupLongitude != null) ? `${p.pickupLatitude},${p.pickupLongitude}` : fmtQ(p.pickupPoint || '');
+
+  const waypoints: MapPoint[] = passengers.map(pointOf).filter((w): w is MapPoint => w != null);
+
   const openMap = () => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ride.destinationOrOrigin + ' Lima Peru')}`;
+    const o = ride.fromUTEC ? utecQ : fmtQ(ride.destinationOrOrigin);
+    const d = ride.fromUTEC ? fmtQ(ride.destinationOrOrigin) : utecQ;
+    const wp = passengers.map(queryOf).filter(Boolean).join('|');
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving${wp ? `&waypoints=${wp}` : ''}`;
     Linking.openURL(url).catch(() => Alert.alert('No se pudo abrir el mapa'));
   };
+  const openPoint = (p: RidePassenger) =>
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${queryOf(p)}`).catch(() => Alert.alert('No se pudo abrir el mapa'));
   const chatSoon = () => Alert.alert('Próximamente', 'El chat estará disponible pronto. Coordina por tus medios habituales mientras tanto.');
   const cancelTrip = () => Alert.alert('Cancelar viaje',
     'La cancelación de viajes estará disponible pronto. Avisa a los participantes mientras tanto.');
@@ -75,6 +97,9 @@ export const ConfirmedTripScreen = ({ route, navigation }: any) => {
           {vehicle && <Row icon="🚙" label="Vehículo" value={`${vehicle.brand} ${vehicle.model} · ${vehicle.plate}`} />}
           {!isDriver && <Row icon="🎓" label="Conductor" value={`Estudiante UTEC #${ride.driverId}`} />}
         </View>
+
+        <Text style={s.section}>Ruta y paradas</Text>
+        <RouteMap origin={mapOrigin} destination={mapDestination} waypoints={waypoints} height={260} />
 
         {isDriver && (
           <>
@@ -93,7 +118,7 @@ export const ConfirmedTripScreen = ({ route, navigation }: any) => {
                   ) : null}
                   <Text style={s.passInfo}>💺 {p.seatsReserved} asiento(s) · 📍 {p.pickupPoint}</Text>
                   <View style={s.passActions}>
-                    <AppButton title="Ver punto" onPress={openMap} variant="outline" style={s.flexBtn} />
+                    <AppButton title="Ver punto" onPress={() => openPoint(p)} variant="outline" style={s.flexBtn} />
                     <AppButton title="Chat" onPress={chatSoon} variant="outline" style={s.flexBtn} />
                   </View>
                 </View>

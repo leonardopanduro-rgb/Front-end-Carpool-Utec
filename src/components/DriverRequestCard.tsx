@@ -8,11 +8,13 @@ interface Props {
   req: RequestPublication;
   onAccept?: () => void;
   onReject?: () => void;
+  onCounter?: () => void;
   accepting?: boolean;
   rejecting?: boolean;
+  countering?: boolean;
 }
 
-export const DriverRequestCard: React.FC<Props> = ({ req, onAccept, onReject, accepting, rejecting }) => (
+export const DriverRequestCard: React.FC<Props> = ({ req, onAccept, onReject, onCounter, accepting, rejecting, countering }) => (
   <View style={styles.card}>
     <View style={styles.row}>
       <Text style={styles.id} numberOfLines={1}>{req.requesterName?.trim() || `Solicitante #${req.requesterId}`}</Text>
@@ -28,12 +30,25 @@ export const DriverRequestCard: React.FC<Props> = ({ req, onAccept, onReject, ac
     <Text style={styles.info}>{req.requesterIsDriver ? '🚗 Viene como conductor' : '🙋 Viene como pasajero'}</Text>
     <Text style={styles.info}>💺 Asientos: {req.seats}</Text>
     <Text style={styles.info}>📍 {req.pickupPointOrDestine}</Text>
+    <Text style={styles.fare}>
+      {req.proposedFare != null ? `💵 Ofrece S/ ${req.proposedFare}` : '💵 Aporte a coordinar'}
+      {req.status === 'COUNTERED' && req.counterFare != null ? `  →  Tu contraoferta: S/ ${req.counterFare}` : ''}
+    </Text>
     {req.message ? <Text style={styles.msg}>"{req.message}"</Text> : null}
+
     {req.status === 'PENDING' && (
-      <View style={styles.actions}>
-        <AppButton title="Aceptar" onPress={onAccept!} loading={accepting} style={styles.btnAccept} />
-        <AppButton title="Rechazar" onPress={onReject!} variant="danger" loading={rejecting} style={styles.btnReject} />
-      </View>
+      <>
+        <AppButton
+          title={req.proposedFare != null ? `Aceptar S/ ${req.proposedFare}` : 'Aceptar'}
+          onPress={onAccept!} loading={accepting} style={styles.acceptBtn} />
+        <View style={styles.actions}>
+          {onCounter && <AppButton title="Contraofertar" onPress={onCounter} loading={countering} variant="outline" style={styles.flexBtn} />}
+          <AppButton title="Rechazar" onPress={onReject!} variant="danger" loading={rejecting} style={styles.flexBtn} />
+        </View>
+      </>
+    )}
+    {req.status === 'COUNTERED' && (
+      <Text style={styles.waiting}>⏳ Contraoferta enviada. Esperando que el solicitante acepte o rechace.</Text>
     )}
   </View>
 );
@@ -44,8 +59,10 @@ const styles = StyleSheet.create({
   id: { fontSize: 15, fontWeight: '800', color: '#0B1F3A', flex: 1, marginRight: 8 },
   meta: { fontSize: 12, color: '#8A9BB0', fontWeight: '600', marginBottom: 6 },
   info: { fontSize: 13, color: '#4A5568', marginBottom: 4 },
+  fare: { fontSize: 14, color: '#0B1F3A', fontWeight: '700', marginTop: 4, marginBottom: 4 },
   msg: { fontSize: 13, color: '#8A9BB0', fontStyle: 'italic', marginBottom: 8 },
+  acceptBtn: { marginTop: 10 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  btnAccept: { flex: 1 },
-  btnReject: { flex: 1 },
+  flexBtn: { flex: 1 },
+  waiting: { fontSize: 13, color: '#C05621', fontWeight: '600', marginTop: 10 },
 });
