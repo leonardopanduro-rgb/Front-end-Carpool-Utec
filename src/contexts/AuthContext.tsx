@@ -1,8 +1,8 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { User } from '../types/user';
 import { userService } from '../services/user';
 import { setSessionExpiredCallback } from '../services/api';
+import { tokenStorage } from '../services/storage';
 
 export type AppMode = 'passenger' | 'driver';
 
@@ -33,13 +33,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const setMode = useCallback(async (next: AppMode) => {
     setModeState(next);
-    await SecureStore.setItemAsync(MODE_KEY, next);
+    await tokenStorage.setItemAsync(MODE_KEY, next);
   }, []);
 
   const logout = useCallback(async () => {
-    await SecureStore.deleteItemAsync('accessToken');
-    await SecureStore.deleteItemAsync('refreshToken');
-    await SecureStore.deleteItemAsync(MODE_KEY);
+    await tokenStorage.deleteItemAsync('accessToken');
+    await tokenStorage.deleteItemAsync('refreshToken');
+    await tokenStorage.deleteItemAsync(MODE_KEY);
     setModeState('passenger');
     setPendingVehicleSetup(false);
     setUser(null);
@@ -54,11 +54,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const restore = async () => {
       try {
-        const token = await SecureStore.getItemAsync('accessToken');
+        const token = await tokenStorage.getItemAsync('accessToken');
         if (token) {
           const me = await userService.getMe();
           setUser(me);
-          const savedMode = await SecureStore.getItemAsync(MODE_KEY);
+          const savedMode = await tokenStorage.getItemAsync(MODE_KEY);
           if (savedMode === 'driver' || savedMode === 'passenger') setModeState(savedMode);
         }
       } catch {
@@ -72,8 +72,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [logout]);
 
   const login = async (accessToken: string, refreshToken: string, userData: User) => {
-    await SecureStore.setItemAsync('accessToken', accessToken);
-    await SecureStore.setItemAsync('refreshToken', refreshToken);
+    await tokenStorage.setItemAsync('accessToken', accessToken);
+    await tokenStorage.setItemAsync('refreshToken', refreshToken);
     setUser(userData);
   };
 

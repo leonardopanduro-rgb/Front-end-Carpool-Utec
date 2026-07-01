@@ -31,6 +31,6 @@ export const isValidSeats = (seats: number): boolean =>
 export const isValidPlate = (plate: string): boolean =>
   /^[A-Z0-9]{3}-?[A-Z0-9]{3,4}$/.test(plate.trim().toUpperCase());
 
-// Precio por asiento: numero valido entre 0 y 1000 (alineado con el backend @PositiveOrZero/@DecimalMax).
+// Precio por asiento: numero valido mayor que 0.
 export const isValidPricePerSeat = (price: number): boolean =>
-  Number.isFinite(price) && price >= 0 && price <= 1000;
+  Number.isFinite(price) && price > 0;

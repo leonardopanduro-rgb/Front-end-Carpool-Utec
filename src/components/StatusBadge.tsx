@@ -4,7 +4,6 @@ import { RequestStatus } from '../types/requestPublication';
 
 const CONFIG: Record<RequestStatus, { label: string; bg: string; color: string }> = {
   PENDING:   { label: 'Pendiente',   bg: '#FFF8DC', color: '#B7791F' },
-  COUNTERED: { label: 'Contraoferta', bg: '#FFF4E5', color: '#C05621' },
   ACCEPTED:  { label: 'Aceptado',    bg: '#F0FFF4', color: '#276749' },
   REJECTED:  { label: 'Rechazado',   bg: '#FFF5F5', color: '#C53030' },
   CANCELLED: { label: 'Cancelado',   bg: '#F7FAFC', color: '#718096' },

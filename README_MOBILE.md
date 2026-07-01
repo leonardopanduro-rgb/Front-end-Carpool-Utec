@@ -1,94 +1,50 @@
-# Carpool UTEC — Frontend Mobile
+# Carpool UTEC - Frontend Mobile
 
-App universitaria para estudiantes UTEC: publicar viajes, solicitar asientos, gestionar solicitudes y calificar compañeros.
+App universitaria para estudiantes UTEC: conductores publican viajes con precio
+fijo por asiento, pasajeros solicitan asientos y conductores aceptan o rechazan
+solicitudes.
 
 ## Stack
-- React Native + Expo (Expo Go compatible)
-- TypeScript · React Navigation v6 · Axios · Expo SecureStore · Expo Location · Expo ImagePicker
 
-## Instalación
+- React Native + Expo SDK 54
+- TypeScript
+- React Navigation v6
+- Axios
+- Expo SecureStore en nativo y localStorage en web
+
+## Instalacion
 
 ```bash
-# 1. Clonar y entrar al proyecto
-git clone <repo> && cd carpool-utec-mobile
-
-# 2. Instalar dependencias base
 npm install
-
-# 3. Instalar paquetes nativos (deja Expo gestionar versiones)
-npx expo install expo-secure-store expo-location expo-image-picker expo-camera \
-  react-native-screens react-native-safe-area-context
-
-# 4. Configurar entorno
 cp .env.example .env
-# Edita .env con la URL correcta (ver opciones abajo)
+npx expo start
 ```
 
 ## Configurar EXPO_PUBLIC_API_URL
 
-Edita `.env` según dónde corre el backend:
+La app usa unicamente `EXPO_PUBLIC_API_URL`. No existe URL hardcodeada ni
+fallback en codigo.
 
 | Entorno | URL |
 |---------|-----|
 | Web / localhost | `http://localhost:8080/api/v1` |
 | Emulador Android | `http://10.0.2.2:8080/api/v1` |
-| Celular físico (misma Wi-Fi) | `http://192.168.1.X:8080/api/v1` |
+| Celular fisico (misma Wi-Fi) | `http://192.168.1.X:8080/api/v1` |
 
-**Celular físico:** reemplaza `192.168.1.X` por la IP LAN de tu PC (`ipconfig` en Windows, `ip addr` en Linux/Mac). El celular y la PC deben estar en la misma red Wi-Fi. El backend debe estar corriendo y el firewall debe permitir el puerto 8080.
+Para celular fisico, reemplaza `192.168.1.X` por la IP LAN de tu PC y permite
+el puerto del backend en el firewall.
 
-## Ejecutar
+## Flujo principal
+
+1. El conductor registra un vehiculo.
+2. El conductor publica un viaje con origen, destino, fecha, hora, asientos y
+   precio por asiento.
+3. El pasajero ve el precio fijo, elige cantidad de asientos y solicita.
+4. El conductor acepta o rechaza la solicitud.
+5. Los viajes confirmados aparecen en Home y pueden calificarse al finalizar.
+
+## Verificacion
 
 ```bash
-# Expo Go en celular físico o emulador
-npx expo start
-
-# Abrir en Android
-npx expo start --android
-
-# Abrir en iOS
-npx expo start --ios
+npx tsc --noEmit
 ```
-
-Escanea el QR con la app **Expo Go** (iOS/Android).
-
-## Solución de errores de red
-
-| Error | Solución |
-|-------|----------|
-| `Network Error` / timeout | Verifica que el backend esté corriendo en el puerto 8080 |
-| `localhost` no conecta en celular físico | Usa la IP LAN de tu PC, no localhost |
-| `10.0.2.2` no conecta en celular real | 10.0.2.2 solo funciona en emulador Android; usa IP LAN para físico |
-| 401 en todas las peticiones | El token expiró; cierra sesión y vuelve a ingresar |
-| Firewall | Permite el puerto 8080 en el firewall de tu PC |
-
-## Guion de demo
-
-1. **Registro** → Crear cuenta con correo @utec.edu.pe, carrera, ciclo
-2. **Publicar viaje** → Modo conductor (con vehículo) o pasajero
-3. **Buscar viajes** → Filtrar por sentido y distrito
-4. **Solicitar asiento** → Ver detalle y enviar solicitud
-5. **Panel de conductor** → Aceptar o rechazar solicitudes
-6. **Solicitudes** → Ver estados (PENDING/ACCEPTED/REJECTED/CANCELLED)
-7. **Viajes confirmados** → Aparecen en Home tras aceptar
-8. **Calificar** → Después de que el `departureTime` pase
-
-## Estructura del proyecto
-
-```
-src/
-  components/   # UI reutilizable
-  contexts/     # AuthContext (sesión)
-  data/         # careers.ts, limaPlaces.ts
-  hooks/        # useAuth, usePublications, useRequests, useVehicles, useRides
-  navigation/   # AppNavigator.tsx
-  screens/      # 13 pantallas completas
-  services/     # api.ts (Axios+JWT+refresh), authService, y todos los demás
-  types/        # Contratos del backend tipados
-  utils/        # validators, formatters, errorMessages, locationHelpers
-```
-
-## Paleta de colores
-- Azul noche: `#0B1F3A`
-- Celeste UTEC: `#18A8E0`
-- Gris concreto: `#F2F4F7`
-- Amarillo pendiente: `#F5C518`

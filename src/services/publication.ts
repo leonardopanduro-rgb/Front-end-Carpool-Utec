@@ -1,5 +1,6 @@
 import api from './api';
 import { Publication, PublicationRequest } from '../types/publication';
+import { RequestPublication } from '../types/requestPublication';
 import { parseAxiosError } from '../utils/errorMessages';
 
 export const publicationService = {
@@ -15,8 +16,8 @@ export const publicationService = {
     try { const r = await api.post<Publication>('/publications', data); return r.data; }
     catch (e) { throw parseAxiosError(e); }
   },
-  getRequests: async (publicationId: number) => {
-    try { const r = await api.get(`/publications/${publicationId}/requests`); return r.data; }
+  getRequests: async (publicationId: number): Promise<RequestPublication[]> => {
+    try { const r = await api.get<RequestPublication[]>(`/publications/${publicationId}/requests`); return r.data; }
     catch (e) { throw parseAxiosError(e); }
   },
 };

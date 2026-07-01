@@ -12,3 +12,13 @@ export interface User {
   rating: number | null;
   role: UserRole;
 }
+
+export interface PublicUser {
+  id: number;
+  name?: string | null;
+  lastName?: string | null;
+  career?: string | null;
+  photoUrl?: string | null;
+  profilePictureUrl?: string | null;
+  rating?: number | null;
+}

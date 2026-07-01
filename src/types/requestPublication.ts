@@ -1,11 +1,10 @@
-export type RequestStatus = 'PENDING' | 'COUNTERED' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+export type RequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
 
 export interface RequestPublication {
   id: number;
   publicationId: number;
   requesterId: number;
-  requesterIsDriver: boolean;
-  seats: number;
+  requestedSeats: number;
   message: string;
   pickupPointOrDestine: string;
   externalLatitude: number | null;
@@ -14,17 +13,12 @@ export interface RequestPublication {
   requesterName?: string | null;
   requesterCareer?: string | null;
   requesterRating?: number | null;
-  /** Precio por asiento del viaje (copiado de la publicacion) para calcular el total. */
+  requesterPhotoUrl?: string | null;
   pricePerSeat?: number | null;
 }
 
 export interface RequestPublicationRequest {
-  requesterIsDriver: boolean;
-  seats: number;
-  message: string;
-  pickupPointOrDestine: string;
-  externalLatitude: number | null;
-  externalLongitude: number | null;
+  requestedSeats: number;
 }
 
 export interface AcceptRequest {

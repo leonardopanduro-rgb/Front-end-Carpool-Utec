@@ -1,8 +1,12 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { parseAxiosError } from '../utils/errorMessages';
+import { tokenStorage } from './storage';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8080/api/v1';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+  throw new Error('EXPO_PUBLIC_API_URL is required. Configure it in your .env file.');
+}
 
 // Separate instance for refresh (no interceptor loop)
 const refreshInstance: AxiosInstance = axios.create({
@@ -26,7 +30,7 @@ export const setSessionExpiredCallback = (cb: () => void) => { onSessionExpired 
 
 // ── Request interceptor: attach Bearer token ───────────────────────────────
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const token = await SecureStore.getItemAsync('accessToken');
+  const token = await tokenStorage.getItemAsync('accessToken');
   if (token) config.headers.set('Authorization', `Bearer ${token}`);
   return config;
 });
@@ -44,12 +48,12 @@ api.interceptors.response.use(
     try {
       if (!refreshPromise) {
         refreshPromise = (async () => {
-          const rt = await SecureStore.getItemAsync('refreshToken');
+          const rt = await tokenStorage.getItemAsync('refreshToken');
           if (!rt) throw new Error('No refresh token');
           const res = await refreshInstance.post('/auth/refresh', { refreshToken: rt });
           const { accessToken, refreshToken } = res.data;
-          await SecureStore.setItemAsync('accessToken', accessToken);
-          await SecureStore.setItemAsync('refreshToken', refreshToken);
+          await tokenStorage.setItemAsync('accessToken', accessToken);
+          await tokenStorage.setItemAsync('refreshToken', refreshToken);
           return { accessToken, refreshToken };
         })();
       }
@@ -59,8 +63,8 @@ api.interceptors.response.use(
       return api(original);
     } catch {
       refreshPromise = null;
-      await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('refreshToken');
+      await tokenStorage.deleteItemAsync('accessToken');
+      await tokenStorage.deleteItemAsync('refreshToken');
       onSessionExpired?.();
       return Promise.reject(parseAxiosError(error));
     }

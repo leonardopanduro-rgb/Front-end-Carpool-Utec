@@ -45,7 +45,12 @@ export const HomeScreen = ({ navigation }: any) => {
 
   // "Disponibles" = ajenas y en las que aún no participo (ni pendiente ni confirmada).
   const available = publications.filter(
-    p => p.authorId !== user?.id && !myActiveReqPubIds.has(p.id) && !myRidePubIds.has(p.id)
+    p => p.authorId !== user?.id &&
+      p.driverToPassenger &&
+      p.seats > 0 &&
+      !isPast(p.departureTime) &&
+      !myActiveReqPubIds.has(p.id) &&
+      !myRidePubIds.has(p.id)
   );
 
   const myPublications = publications.filter(p => p.authorId === user?.id);

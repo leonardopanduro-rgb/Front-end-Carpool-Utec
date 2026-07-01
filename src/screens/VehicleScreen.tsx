@@ -13,6 +13,7 @@ import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { parseAxiosError } from '../utils/errorMessages';
+import { isValidPlate, isValidSeats, MAX_VEHICLE_SEATS } from '../utils/validators';
 
 export const VehicleScreen = ({ navigation }: any) => {
   const { user } = useAuth();
@@ -33,12 +34,13 @@ export const VehicleScreen = ({ navigation }: any) => {
 
   const validate = () => {
     const e: Record<string,string> = {};
-    if (!form.plate.trim()) e.plate = 'Requerido';
+    if (!form.plate.trim()) e.plate = 'Ingresa la placa';
+    else if (!isValidPlate(form.plate)) e.plate = 'Formato de placa invalido. Ej: ABC123 o ABC-123';
     if (!form.brand.trim()) e.brand = 'Requerido';
     if (!form.model.trim()) e.model = 'Requerido';
     if (!form.color.trim()) e.color = 'Requerido';
-    const s = parseInt(form.seats);
-    if (isNaN(s) || s <= 0) e.seats = 'Debe ser mayor a 0';
+    const s = Number(form.seats);
+    if (!isValidSeats(s)) e.seats = `Los asientos deben estar entre 1 y ${MAX_VEHICLE_SEATS}`;
     setFormErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -46,7 +48,13 @@ export const VehicleScreen = ({ navigation }: any) => {
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
-    const data: VehicleRequest = { plate:form.plate.trim(), brand:form.brand.trim(), model:form.model.trim(), color:form.color.trim(), seats:parseInt(form.seats) };
+    const data: VehicleRequest = {
+      plate: form.plate.trim().toUpperCase(),
+      brand: form.brand.trim(),
+      model: form.model.trim(),
+      color: form.color.trim(),
+      seats: Number(form.seats),
+    };
     try {
       if (editing) await vehicleService.update(editing.id, data);
       else await vehicleService.create(data);

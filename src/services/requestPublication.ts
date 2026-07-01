@@ -4,7 +4,10 @@ import { parseAxiosError } from '../utils/errorMessages';
 
 export const requestPublicationService = {
   create: async (publicationId: number, data: RequestPublicationRequest): Promise<RequestPublication> => {
-    try { const r = await api.post<RequestPublication>(`/publications/${publicationId}/requests`, data); return r.data; }
+    try {
+      const r = await api.post<RequestPublication>(`/publications/${publicationId}/requests`, data);
+      return r.data;
+    }
     catch (e) { throw parseAxiosError(e); }
   },
   getAll: async (): Promise<RequestPublication[]> => {
