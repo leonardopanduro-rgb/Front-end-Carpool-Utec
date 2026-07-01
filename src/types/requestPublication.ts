@@ -14,9 +14,8 @@ export interface RequestPublication {
   requesterName?: string | null;
   requesterCareer?: string | null;
   requesterRating?: number | null;
-  proposedFare?: number | null;
-  counterFare?: number | null;
-  agreedFare?: number | null;
+  /** Precio por asiento del viaje (copiado de la publicacion) para calcular el total. */
+  pricePerSeat?: number | null;
 }
 
 export interface RequestPublicationRequest {
@@ -26,7 +25,6 @@ export interface RequestPublicationRequest {
   pickupPointOrDestine: string;
   externalLatitude: number | null;
   externalLongitude: number | null;
-  proposedFare?: number | null;
 }
 
 export interface AcceptRequest {

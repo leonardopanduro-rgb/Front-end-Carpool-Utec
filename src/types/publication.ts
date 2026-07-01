@@ -10,6 +10,8 @@ export interface Publication {
   externalLongitude: number | null;
   distanceToUtecKm: number | null;
   departureTime: string;
+  /** Precio por asiento (S/) fijado por el conductor. Null en publicaciones de pasajero. */
+  pricePerSeat: number | null;
   authorId: number;
   vehicleId: number | null;
   rideId: number | null;
@@ -25,5 +27,7 @@ export interface PublicationRequest {
   externalLatitude: number | null;
   externalLongitude: number | null;
   departureTime: string;
+  /** Precio por asiento (S/) fijado por el conductor. */
+  pricePerSeat: number | null;
   vehicleId: number | null;
 }

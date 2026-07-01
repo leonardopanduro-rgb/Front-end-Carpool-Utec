@@ -17,6 +17,20 @@ export const formatRating = (rating: number | null): string =>
 export const formatDistance = (km: number | null): string =>
   km != null ? `${km.toFixed(1)} km de UTEC` : '';
 
+/** Precio por asiento fijado por el conductor. */
+export const formatPricePerSeat = (price?: number | null): string => {
+  if (price == null) return 'Aporte a coordinar';
+  if (price === 0) return 'Gratis';
+  return `S/ ${price.toFixed(2)} por asiento`;
+};
+
+/** Total = precio por asiento x cantidad de asientos. */
+export const formatSeatsTotal = (price: number | null | undefined, seats: number): string => {
+  if (price == null || !Number.isFinite(seats) || seats <= 0) return '';
+  if (price === 0) return 'Gratis';
+  return `Total: S/ ${(price * seats).toFixed(2)} (${seats} × S/ ${price.toFixed(2)})`;
+};
+
 /** Converts JS Date to YYYY-MM-DDTHH:mm:ss (no Z, no timezone) */
 export const toLocalIso = (date: Date): string => {
   const pad = (n: number) => String(n).padStart(2, '0');
